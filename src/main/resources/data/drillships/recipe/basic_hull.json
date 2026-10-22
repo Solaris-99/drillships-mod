@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "BBB",
+    "SSS",
+    "BBB"
+  ],
+  "key": {
+    "B": {
+      "tag": "c:storage_blocks/copper"
+    },
+    "S": {
+      "tag": "c:ingots/iron"
+    }
+  },
+  "result": {
+    "id": "drillships:basic_hull",
+    "count": 1
+  }
+}

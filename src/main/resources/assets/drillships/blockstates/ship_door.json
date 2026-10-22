@@ -1,0 +1,6 @@
+{
+  "variants": {
+    "half=lower": { "model": "drillships:block/ship_door_bottom" },
+    "half=upper": { "model": "drillships:block/ship_door_top" }
+  }
+}

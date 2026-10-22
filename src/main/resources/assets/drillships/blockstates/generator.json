@@ -1,0 +1,6 @@
+{
+  "variants": {
+    "active=false": { "model": "drillships:block/generator" },
+    "active=true": { "model": "drillships:block/generator_lit" }
+  }
+}

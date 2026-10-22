@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " D ",
+    "DSD",
+    " S "
+  ],
+  "key": {
+    "D": {
+      "item": "drillships:basic_drill_piece"
+    },
+    "S": {
+      "item": "drillships:basic_drill_shaft"
+    }
+  },
+  "result": {
+    "id": "drillships:basic_drill",
+    "count": 1
+  }
+}

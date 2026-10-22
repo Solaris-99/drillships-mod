@@ -1,0 +1,18 @@
+{
+  "engine_idle": {
+    "subtitle": "subtitles.drillships.engine_idle",
+    "sounds": [{ "name": "drillships:engine_idle", "attenuation_distance": 24 }]
+  },
+  "engine_working": {
+    "subtitle": "subtitles.drillships.engine_working",
+    "sounds": [{ "name": "drillships:engine_working", "attenuation_distance": 24 }]
+  },
+  "engine_stop": {
+    "subtitle": "subtitles.drillships.engine_stop",
+    "sounds": [{ "name": "drillships:engine_stop", "attenuation_distance": 24 }]
+  },
+  "digging": {
+    "subtitle": "subtitles.drillships.digging",
+    "sounds": [{ "name": "drillships:digging", "attenuation_distance": 24 }]
+  }
+}
