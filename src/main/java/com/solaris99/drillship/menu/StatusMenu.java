@@ -3,15 +3,18 @@ package com.solaris99.drillship.menu;
 import javax.annotation.Nullable;
 
 import com.solaris99.drillship.item.DrillItem;
+import com.solaris99.drillship.item.WagonItem;
 import com.solaris99.drillship.registry.ModMenus;
 import com.solaris99.drillship.ship.ShipState;
 import com.solaris99.drillship.ship.ShipTravel;
+import com.solaris99.drillship.ship.ShipWagons;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
+import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -23,11 +26,12 @@ import net.neoforged.neoforge.items.IItemHandlerModifiable;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import net.neoforged.neoforge.items.SlotItemHandler;
 
-/** The status panel: ship readouts, warnings, drill and fuel slots, drill/auto-fuel toggles and pickup. */
+/** The status panel: ship readouts, warnings, drill/fuel/wagon slots, toggles, wagon detaching and pickup. */
 public class StatusMenu extends AbstractContainerMenu {
     public static final int BUTTON_TOGGLE_DRILL = 0;
     public static final int BUTTON_TOGGLE_AUTO_FUEL = 1;
     public static final int BUTTON_PICK_UP = 2;
+    public static final int BUTTON_DETACH_WAGON = 3;
 
     public static final int ENERGY = 0;
     public static final int CAPACITY = 1;
@@ -43,7 +47,9 @@ public class StatusMenu extends AbstractContainerMenu {
     public static final int Z = 11;
     public static final int WARNINGS = 12;
     public static final int FLAGS = 13;
-    private static final int DATA_COUNT = 14;
+    public static final int WAGONS = 14;
+    public static final int MAX_WAGONS = 15;
+    private static final int DATA_COUNT = 16;
 
     public static final int FLAG_DRILL_ON = 1;
     public static final int FLAG_AUTO_FUEL = 1 << 1;
@@ -52,14 +58,18 @@ public class StatusMenu extends AbstractContainerMenu {
     public static final int DRILL_SLOT_Y = 18;
     public static final int FUEL_SLOT_X = 152;
     public static final int FUEL_SLOT_Y = 52;
-    public static final int INVENTORY_Y = 140;
+    public static final int WAGON_SLOT_X = 152;
+    public static final int WAGON_SLOT_Y = 86;
+    public static final int INVENTORY_Y = 170;
 
-    private static final int SHIP_SLOTS = 2;
+    private static final int SHIP_SLOTS = 3;
 
     @Nullable
     private final ShipState ship;
     private final BlockPos fixture;
     private final SplitIntData data;
+    // A wagon put here is attached right away; if it can't be, it stays here and goes back to the player on close.
+    private final SimpleContainer wagonInput;
 
     public static void open(ServerPlayer player, ShipState ship, BlockPos fixture) {
         player.openMenu(new SimpleMenuProvider((id, inventory, p) -> new StatusMenu(id, inventory, ship, fixture),
@@ -80,9 +90,22 @@ public class StatusMenu extends AbstractContainerMenu {
         this.ship = ship;
         this.fixture = fixture;
         this.data = clientData != null ? clientData : new SplitIntData(DATA_COUNT, index -> compute(ship, inventory.player, index));
+        this.wagonInput = new SimpleContainer(1) {
+            @Override
+            public void setChanged() {
+                super.setChanged();
+                attachWagon(inventory.player);
+            }
+        };
 
         addSlot(new SlotItemHandler(drill, 0, DRILL_SLOT_X, DRILL_SLOT_Y));
         addSlot(new SlotItemHandler(fuel, 0, FUEL_SLOT_X, FUEL_SLOT_Y));
+        addSlot(new Slot(wagonInput, 0, WAGON_SLOT_X, WAGON_SLOT_Y) {
+            @Override
+            public boolean mayPlace(ItemStack stack) {
+                return stack.getItem() instanceof WagonItem;
+            }
+        });
         ShipMenus.addPlayerInventory(this::addSlot, inventory, INVENTORY_Y);
         addDataSlots(data);
     }
@@ -104,6 +127,8 @@ public class StatusMenu extends AbstractContainerMenu {
             case Z -> Mth.floor(ship.position().z);
             case WARNINGS -> ship.warnings(player.level().getGameTime());
             case FLAGS -> (ship.isDrillOn() ? FLAG_DRILL_ON : 0) | (ship.isAutoFuel() ? FLAG_AUTO_FUEL : 0);
+            case WAGONS -> ship.wagonCount();
+            case MAX_WAGONS -> ship.tier().maxWagons();
             default -> 0;
         };
     }
@@ -125,6 +150,12 @@ public class StatusMenu extends AbstractContainerMenu {
             case BUTTON_TOGGLE_DRILL -> ship.setDrillOn(!ship.isDrillOn());
             case BUTTON_TOGGLE_AUTO_FUEL -> ship.setAutoFuel(!ship.isAutoFuel());
             case BUTTON_PICK_UP -> ShipTravel.pickUp(serverPlayer, ship);
+            case BUTTON_DETACH_WAGON -> {
+                Component error = ShipWagons.detachLast(serverPlayer, ship);
+                if (error != null) {
+                    serverPlayer.displayClientMessage(error, true);
+                }
+            }
             default -> {
                 return false;
             }
@@ -144,6 +175,10 @@ public class StatusMenu extends AbstractContainerMenu {
             if (!moveItemStackTo(stack, SHIP_SLOTS, slots.size(), true)) {
                 return ItemStack.EMPTY;
             }
+        } else if (stack.getItem() instanceof WagonItem) {
+            if (!moveItemStackTo(stack, 2, 3, false)) {
+                return ItemStack.EMPTY;
+            }
         } else if (stack.getItem() instanceof DrillItem) {
             if (!moveItemStackTo(stack, 0, 1, false)) {
                 return ItemStack.EMPTY;
@@ -161,6 +196,25 @@ public class StatusMenu extends AbstractContainerMenu {
             slot.setChanged();
         }
         return original;
+    }
+
+    private void attachWagon(Player player) {
+        ItemStack stack = wagonInput.getItem(0);
+        if (ship == null || stack.isEmpty() || !(player instanceof ServerPlayer serverPlayer)) {
+            return;
+        }
+        Component error = ShipWagons.attach(serverPlayer.server, ship, stack);
+        if (error != null) {
+            serverPlayer.displayClientMessage(error, true);
+        } else {
+            wagonInput.removeItemNoUpdate(0);
+        }
+    }
+
+    @Override
+    public void removed(Player player) {
+        super.removed(player);
+        clearContainer(player, wagonInput);
     }
 
     @Override

@@ -1,7 +1,8 @@
 package com.solaris99.drillship;
 
 import com.solaris99.drillship.client.ClientEvents;
-import com.solaris99.drillship.client.DrillshipRenderer;
+import com.solaris99.drillship.client.DrillshipHud;
+import com.solaris99.drillship.client.ShipSectionRenderer;
 import com.solaris99.drillship.client.ShipStorageScreen;
 import com.solaris99.drillship.client.StatusScreen;
 import com.solaris99.drillship.registry.ModEntities;
@@ -12,6 +13,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
@@ -26,11 +28,17 @@ public class DrillshipsClient {
         modEventBus.addListener(DrillshipsClient::registerRenderers);
         modEventBus.addListener(DrillshipsClient::registerScreens);
         modEventBus.addListener(ClientEvents::registerKeys);
+        modEventBus.addListener(DrillshipsClient::registerHud);
         ClientEvents.register(NeoForge.EVENT_BUS);
     }
 
     private static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
-        event.registerEntityRenderer(ModEntities.DRILLSHIP.get(), DrillshipRenderer::new);
+        event.registerEntityRenderer(ModEntities.DRILLSHIP.get(), ShipSectionRenderer::new);
+        event.registerEntityRenderer(ModEntities.WAGON.get(), ShipSectionRenderer::new);
+    }
+
+    private static void registerHud(RegisterGuiLayersEvent event) {
+        event.registerAboveAll(Drillships.id("hud"), DrillshipHud::render);
     }
 
     private static void registerScreens(RegisterMenuScreensEvent event) {

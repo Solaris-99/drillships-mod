@@ -3,6 +3,7 @@ package com.solaris99.drillship.registry;
 import com.solaris99.drillship.Drillships;
 import com.solaris99.drillship.item.DrillItem;
 import com.solaris99.drillship.item.DrillshipItem;
+import com.solaris99.drillship.item.WagonItem;
 import com.solaris99.drillship.ship.ShipTier;
 
 import net.minecraft.world.item.Item;
@@ -25,6 +26,8 @@ public final class ModItems {
             () -> new DrillItem(ShipTier.BASIC, new Item.Properties()));
     public static final DeferredItem<DrillshipItem> BASIC_DRILLSHIP = ITEMS.register("basic_drillship",
             () -> new DrillshipItem(ShipTier.BASIC, new Item.Properties()));
+    public static final DeferredItem<WagonItem> BASIC_WAGON = ITEMS.register("basic_wagon",
+            () -> new WagonItem(ShipTier.BASIC, new Item.Properties()));
 
     public static ItemStack newDrill(ShipTier tier) {
         return switch (tier) {

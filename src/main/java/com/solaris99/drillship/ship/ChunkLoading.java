@@ -41,10 +41,14 @@ public final class ChunkLoading {
             release(server, ship);
             return;
         }
-        AABB around = ShipShape.Frame.of(ship.position(), ship.yaw(), ship.pitch())
-                .bounds(new ShipShape(ship.tier()).whole())
-                .inflate(16);
-        apply(server, EXTERIOR, ship.id(), ship.dimension(), chunksIn(around));
+        Set<Long> exterior = chunksIn(ShipShape.Frame.of(ship.position(), ship.yaw(), ship.pitch())
+                .bounds(ShipShape.drillhead(ship.tier()).whole())
+                .inflate(16));
+        ShipShape wagon = ShipShape.wagon(ship.tier());
+        for (int i = 1; i <= ship.wagonCount(); i++) {
+            exterior.addAll(chunksIn(ship.wagonPose(i).frame().bounds(wagon.whole()).inflate(16)));
+        }
+        apply(server, EXTERIOR, ship.id(), ship.dimension(), exterior);
         if (!INTERIOR.containsKey(interiorOwner(ship))) {
             apply(server, INTERIOR, interiorOwner(ship), ModKeys.INTERIOR, chunksIn(ship.layout().bounds()));
         }

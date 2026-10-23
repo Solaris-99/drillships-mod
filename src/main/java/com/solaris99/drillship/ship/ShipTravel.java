@@ -1,5 +1,8 @@
 package com.solaris99.drillship.ship;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import javax.annotation.Nullable;
 
 import com.solaris99.drillship.entity.DrillshipEntity;
@@ -16,11 +19,16 @@ import net.minecraft.world.phys.Vec3;
 /** Moving players between the interior, the exterior and the driver's seat. */
 public final class ShipTravel {
     public static void enterShip(ServerPlayer player, ShipState ship) {
+        enterSection(player, ship, 0);
+    }
+
+    /** Section 0 is the drillhead, 1..n are wagons. */
+    public static void enterSection(ServerPlayer player, ShipState ship, int section) {
         ServerLevel interior = player.server.getLevel(ModKeys.INTERIOR);
         if (interior == null) {
             return;
         }
-        Vec3 point = ship.layout().entryPoint();
+        Vec3 point = section == 0 ? ship.layout().entryPoint() : ship.layout().room(section).entryPoint();
         player.teleportTo(interior, point.x, point.y, point.z, 0.0F, 0.0F);
     }
 
@@ -64,15 +72,15 @@ public final class ShipTravel {
         if (level == null) {
             return null;
         }
-        ShipShape shape = new ShipShape(ship.tier());
+        ShipShape shape = ShipShape.drillhead(ship.tier());
         ShipShape.Frame frame = ShipShape.Frame.of(ship.position(), ship.yaw(), 0.0F);
         double side = shape.halfWidth + 0.8;
-        Vec3[] candidates = {
-                frame.toWorld(-side, 0, 0),
-                frame.toWorld(side, 0, 0),
-                frame.toWorld(0, 0, shape.back - 0.8),
-                frame.toWorld(0, shape.height + 0.05, 0),
-        };
+        List<Vec3> candidates = new ArrayList<>(List.of(frame.toWorld(-side, 0, 0), frame.toWorld(side, 0, 0)));
+        // Behind the drillhead is the first wagon, if there is one.
+        if (ship.wagonCount() == 0) {
+            candidates.add(frame.toWorld(0, 0, shape.back - 0.8));
+        }
+        candidates.add(frame.toWorld(0, shape.height + 0.05, 0));
         for (Vec3 candidate : candidates) {
             if (level.noCollision(null, player.getDimensions(Pose.STANDING).makeBoundingBox(candidate))) {
                 return candidate;
@@ -87,7 +95,11 @@ public final class ShipTravel {
         if (interior == null) {
             return;
         }
-        if (!ship.hasNoItems() || !Interiors.isEmpty(interior, ship.layout(), player)) {
+        if (ship.wagonCount() > 0) {
+            player.displayClientMessage(Component.translatable("message.drillships.has_wagons"), true);
+            return;
+        }
+        if (!ship.hasNoItems() || !Interiors.isEmpty(interior, ship.layout().room(0), player)) {
             player.displayClientMessage(Component.translatable("message.drillships.not_empty"), true);
             return;
         }
@@ -109,6 +121,9 @@ public final class ShipTravel {
         if (entity != null) {
             entity.ejectPassengers();
             entity.discard();
+        }
+        for (int wagon = ship.wagonCount(); wagon >= 1; wagon--) {
+            ShipWagons.removeExterior(server, ship, wagon);
         }
         ChunkLoading.release(server, ship);
         ServerLevel interior = server.getLevel(ModKeys.INTERIOR);

@@ -3,59 +3,56 @@ package com.solaris99.drillship.entity;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import javax.annotation.Nullable;
 
 import com.solaris99.drillship.Config;
 import com.solaris99.drillship.item.DrillItem;
+import com.solaris99.drillship.network.ModNetwork;
 import com.solaris99.drillship.registry.ModEntities;
 import com.solaris99.drillship.registry.ModKeys;
 import com.solaris99.drillship.ship.ShipManager;
 import com.solaris99.drillship.ship.ShipShape;
 import com.solaris99.drillship.ship.ShipState;
-import com.solaris99.drillship.ship.ShipTier;
 import com.solaris99.drillship.ship.ShipTravel;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LightBlock;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.AABB;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.common.util.FakePlayerFactory;
 import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
- * The drillship as seen from the outside world. It holds no persistent data: {@link ShipState} is the source of truth
- * and the entity is respawned from it whenever its chunk loads. Movement is server-authoritative; the driver's client
- * only sends input.
+ * The drillhead as seen from the outside world. It drives, drills and lights the way; wagons follow its path. Movement
+ * is server-authoritative; the driver's client only sends input.
  */
-public class DrillshipEntity extends Entity {
-    private static final EntityDataAccessor<Integer> DATA_TIER = SynchedEntityData.defineId(DrillshipEntity.class, EntityDataSerializers.INT);
+public class DrillshipEntity extends ShipSectionEntity {
     private static final EntityDataAccessor<Boolean> DATA_DRILL_ON = SynchedEntityData.defineId(DrillshipEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> DATA_DRILL_WORN = SynchedEntityData.defineId(DrillshipEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> DATA_MOVING = SynchedEntityData.defineId(DrillshipEntity.class, EntityDataSerializers.BOOLEAN);
@@ -71,6 +68,7 @@ public class DrillshipEntity extends Entity {
     // How far the driver may look away from the ship's heading while it moves.
     private static final float DRIVER_LOOK_LIMIT = 70.0F;
     private static final double[] STEP_FRACTIONS = {1.0, 0.5, 0.25};
+    private static final int HUD_UPDATE_TICKS = 5;
 
     // Server
     private float inputForward;
@@ -84,12 +82,6 @@ public class DrillshipEntity extends Entity {
     private int nextBreakerSlot;
 
     // Client
-    private int lerpSteps;
-    private double lerpX;
-    private double lerpY;
-    private double lerpZ;
-    private double lerpYRot;
-    private double lerpXRot;
     private float drillAngle;
     private float drillAngleO;
 
@@ -106,20 +98,19 @@ public class DrillshipEntity extends Entity {
 
     public DrillshipEntity(EntityType<? extends DrillshipEntity> type, Level level) {
         super(type, level);
-        this.blocksBuilding = true;
     }
 
     public static DrillshipEntity create(ServerLevel level, ShipState ship) {
         DrillshipEntity entity = new DrillshipEntity(ModEntities.DRILLSHIP.get(), level);
         entity.setUUID(ship.id());
-        entity.entityData.set(DATA_TIER, ship.tier().ordinal());
+        entity.setTier(ship.tier());
         entity.moveTo(ship.position().x, ship.position().y, ship.position().z, ship.yaw(), ship.pitch());
         return entity;
     }
 
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
-        builder.define(DATA_TIER, 0);
+        super.defineSynchedData(builder);
         builder.define(DATA_DRILL_ON, false);
         builder.define(DATA_DRILL_WORN, false);
         builder.define(DATA_MOVING, false);
@@ -127,23 +118,8 @@ public class DrillshipEntity extends Entity {
     }
 
     @Override
-    public void onSyncedDataUpdated(EntityDataAccessor<?> key) {
-        super.onSyncedDataUpdated(key);
-        if (DATA_TIER.equals(key)) {
-            setBoundingBox(makeBoundingBox());
-        }
-    }
-
-    public ShipTier tier() {
-        return ShipTier.byId(entityData.get(DATA_TIER));
-    }
-
     public ShipShape shape() {
-        return new ShipShape(tier());
-    }
-
-    public ShipShape.Frame frame() {
-        return ShipShape.Frame.of(position(), getYRot(), getXRot());
+        return ShipShape.drillhead(tier());
     }
 
     public boolean isDrillSpinning() {
@@ -158,18 +134,13 @@ public class DrillshipEntity extends Entity {
         return entityData.get(DATA_MOVING);
     }
 
-    /** The engine runs while someone is driving and the ship has energy. */
+    /** The engine runs while someone is driving and the ship has energy. The headlights are on while it runs. */
     public boolean isEngineOn() {
         return entityData.get(DATA_ENGINE_ON);
     }
 
     public float getDrillAngle(float partialTick) {
         return Mth.lerp(partialTick, drillAngleO, drillAngle);
-    }
-
-    @Override
-    protected AABB makeBoundingBox() {
-        return frame().bounds(shape().whole());
     }
 
     // Input from the driver's client
@@ -192,7 +163,11 @@ public class DrillshipEntity extends Entity {
     public void tick() {
         super.tick();
         if (level().isClientSide()) {
-            tickClient();
+            tickLerp();
+            drillAngleO = drillAngle;
+            if (isDrillSpinning()) {
+                drillAngle += 25.0F;
+            }
             return;
         }
         ServerLevel level = (ServerLevel) level();
@@ -202,18 +177,6 @@ public class DrillshipEntity extends Entity {
             return;
         }
         tickServer(level, ship);
-    }
-
-    private void tickClient() {
-        if (lerpSteps > 0) {
-            lerpPositionAndRotationStep(lerpSteps, lerpX, lerpY, lerpZ, lerpYRot, lerpXRot);
-            lerpSteps--;
-            setBoundingBox(makeBoundingBox());
-        }
-        drillAngleO = drillAngle;
-        if (isDrillSpinning()) {
-            drillAngle += 25.0F;
-        }
     }
 
     private void tickServer(ServerLevel level, ShipState ship) {
@@ -241,15 +204,23 @@ public class DrillshipEntity extends Entity {
         }
         Vec3 displacement = position().subtract(start);
         if (displacement.lengthSqr() > 1.0E-6) {
-            pushEntities(level, shape);
+            pushEntities(level);
         }
+
+        boolean engineOn = driver != null && ship.energy() > 0;
+        updateHeadlight(level, ship, engineOn);
 
         ItemStack drill = ship.drill();
         entityData.set(DATA_DRILL_ON, drilling);
         entityData.set(DATA_DRILL_WORN, !drill.isEmpty() && DrillItem.isWorn(drill));
         entityData.set(DATA_MOVING, Math.abs(speed) > 1.0E-3);
-        entityData.set(DATA_ENGINE_ON, driver != null && ship.energy() > 0);
+        entityData.set(DATA_ENGINE_ON, engineOn);
         ship.updatePose(level.dimension(), position(), getYRot(), getXRot(), displacement.length() * 20.0);
+
+        // Clients without the mod (or test players) never negotiated the channel.
+        if (driver != null && tickCount % HUD_UPDATE_TICKS == 0 && driver.connection.hasChannel(ModNetwork.ShipStatus.TYPE)) {
+            PacketDistributor.sendToPlayer(driver, ModNetwork.ShipStatus.of(ship, level.getGameTime()));
+        }
     }
 
     private void updateSpeed(ShipState ship) {
@@ -280,9 +251,7 @@ public class DrillshipEntity extends Entity {
             return;
         }
         if (isClear(level, ShipShape.Frame.of(position(), yaw, pitch), shape, true)) {
-            setYRot(yaw);
-            setXRot(pitch);
-            setBoundingBox(makeBoundingBox());
+            setPose(position(), yaw, pitch);
         }
     }
 
@@ -378,27 +347,12 @@ public class DrillshipEntity extends Entity {
         return clear;
     }
 
-    // Unloaded chunks count as solid so the ship never loads chunks by itself.
-    private static boolean isSolid(ServerLevel level, BlockPos pos) {
-        return !level.isLoaded(pos) || !level.getBlockState(pos).getCollisionShape(level, pos).isEmpty();
-    }
-
-    public static boolean isSpaceClear(ServerLevel level, ShipShape.Frame frame, ShipShape shape) {
-        for (BlockPos pos : frame.blocksIn(shape.whole())) {
-            if (isSolid(level, pos)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
     // Mining
 
     private void mine(ServerLevel level, ShipState ship, ShipShape shape, @Nullable ServerPlayer driver) {
         Set<BlockPos> targets = new HashSet<>(blockers);
         for (BlockPos pos : frame().blocksIn(shape.drillZone())) {
-            BlockState state = level.getBlockState(pos);
-            if (!state.isAir() && !(state.getBlock() instanceof LiquidBlock)) {
+            if (isMineable(level.getBlockState(pos))) {
                 targets.add(pos);
             }
         }
@@ -414,7 +368,7 @@ public class DrillshipEntity extends Entity {
                 continue;
             }
             BlockState state = level.getBlockState(pos);
-            if (state.isAir() || state.getBlock() instanceof LiquidBlock) {
+            if (!isMineable(state)) {
                 continue;
             }
             float hardness = state.getDestroySpeed(level, pos);
@@ -447,6 +401,11 @@ public class DrillshipEntity extends Entity {
             level.destroyBlockProgress(progress.breakerId, pos, -1);
             mining.remove(pos);
         }
+    }
+
+    // Fluids flow back in, and light blocks are invisible (and may be our own headlight).
+    private static boolean isMineable(BlockState state) {
+        return !state.isAir() && !(state.getBlock() instanceof LiquidBlock) && !(state.getBlock() instanceof LightBlock);
     }
 
     private void breakBlock(ServerLevel level, ShipState ship, BlockPos pos, BlockState state, ItemStack drill, boolean correctTier, Player breaker) {
@@ -490,6 +449,49 @@ public class DrillshipEntity extends Entity {
         return -1 - (getId() * 1024 + nextBreakerSlot);
     }
 
+    // Headlights: a single invisible light block that travels inside the front of the hull.
+
+    private void updateHeadlight(ServerLevel level, ShipState ship, boolean on) {
+        BlockPos target = null;
+        if (on) {
+            ShipShape shape = shape();
+            target = BlockPos.containing(frame().toWorld(0, shape.height / 2, shape.hullFront - 1.0));
+        }
+        if (Objects.equals(target, ship.headlight())) {
+            return;
+        }
+        removeHeadlight(level, ship);
+        if (target != null && placeLight(level, target)) {
+            ship.setHeadlight(target);
+        }
+    }
+
+    private static boolean placeLight(ServerLevel level, BlockPos pos) {
+        BlockState state = level.getBlockState(pos);
+        BlockState light = Blocks.LIGHT.defaultBlockState().setValue(LightBlock.LEVEL, LightBlock.MAX_LEVEL);
+        if (state.isAir()) {
+            return level.setBlock(pos, light, Block.UPDATE_ALL);
+        }
+        if (state.is(Blocks.WATER) && state.getFluidState().isSource()) {
+            return level.setBlock(pos, light.setValue(BlockStateProperties.WATERLOGGED, true), Block.UPDATE_ALL);
+        }
+        return false;
+    }
+
+    /** Removes the light block, if it is still there. Does nothing while the chunk is unloading. */
+    public static void removeHeadlight(ServerLevel level, ShipState ship) {
+        BlockPos pos = ship.headlight();
+        if (pos == null || !level.isLoaded(pos)) {
+            return;
+        }
+        BlockState state = level.getBlockState(pos);
+        if (state.is(Blocks.LIGHT)) {
+            boolean water = state.getValue(BlockStateProperties.WATERLOGGED);
+            level.setBlock(pos, water ? Fluids.WATER.defaultFluidState().createLegacyBlock() : Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+        }
+        ship.setHeadlight(null);
+    }
+
     // Entities
 
     private void hurtEntitiesInDrill(ServerLevel level, ShipShape shape) {
@@ -502,51 +504,6 @@ public class DrillshipEntity extends Entity {
                 entity.hurt(source, damage);
             }
         }
-    }
-
-    /** Pushes entities out of the ship's way, or squashes them if there is nowhere to go. */
-    private void pushEntities(ServerLevel level, ShipShape shape) {
-        ShipShape.Frame frame = frame();
-        DamageSource squash = damageSource(level, ModKeys.SQUASH_DAMAGE);
-        float damage = Config.SQUASH_DAMAGE.get().floatValue();
-        List<Entity> entities = level.getEntities(this, frame.bounds(shape.whole()), this::isOutsider);
-        for (Entity entity : entities) {
-            double margin = entity.getBbWidth() / 2.0;
-            Vec3 local = frame.toLocal(entity.getBoundingBox().getCenter());
-            if (!shape.whole().inflate(margin).contains(local)) {
-                continue;
-            }
-            Vec3 push = escapeVector(frame, shape, local, margin);
-            if (level.noCollision(entity, entity.getBoundingBox().move(push))) {
-                if (entity instanceof ServerPlayer) {
-                    entity.setDeltaMovement(entity.getDeltaMovement().add(push));
-                    entity.hurtMarked = true;
-                } else {
-                    entity.setPos(entity.position().add(push));
-                }
-            } else {
-                entity.hurt(squash, damage);
-            }
-        }
-    }
-
-    // The shortest way out of the ship's box: through a side, the front or the back.
-    private static Vec3 escapeVector(ShipShape.Frame frame, ShipShape shape, Vec3 local, double margin) {
-        double side = shape.halfWidth + margin - Math.abs(local.x) + 0.01;
-        double front = shape.drillFront + margin - local.z + 0.01;
-        double back = local.z - (shape.back - margin) + 0.01;
-        if (side <= front && side <= back) {
-            return frame.right().scale(Math.signum(local.x) * side);
-        }
-        return front <= back ? frame.forward().scale(front) : frame.forward().scale(-back);
-    }
-
-    private boolean isOutsider(Entity entity) {
-        return entity.isAlive() && !entity.isSpectator() && !hasPassenger(entity) && !(entity instanceof DrillshipEntity);
-    }
-
-    private DamageSource damageSource(ServerLevel level, ResourceKey<DamageType> type) {
-        return new DamageSource(level.registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(type), this);
     }
 
     // Passengers: the driver sits at the front, looking through the periscope.
@@ -597,89 +554,15 @@ public class DrillshipEntity extends Entity {
         return InteractionResult.sidedSuccess(level().isClientSide());
     }
 
-    // Client interpolation
-
-    @Override
-    public void lerpTo(double x, double y, double z, float yRot, float xRot, int steps) {
-        this.lerpX = x;
-        this.lerpY = y;
-        this.lerpZ = z;
-        this.lerpYRot = yRot;
-        this.lerpXRot = xRot;
-        this.lerpSteps = steps;
-    }
-
-    @Override
-    public double lerpTargetX() {
-        return lerpSteps > 0 ? lerpX : getX();
-    }
-
-    @Override
-    public double lerpTargetY() {
-        return lerpSteps > 0 ? lerpY : getY();
-    }
-
-    @Override
-    public double lerpTargetZ() {
-        return lerpSteps > 0 ? lerpZ : getZ();
-    }
-
-    @Override
-    public float lerpTargetXRot() {
-        return lerpSteps > 0 ? (float) lerpXRot : getXRot();
-    }
-
-    @Override
-    public float lerpTargetYRot() {
-        return lerpSteps > 0 ? (float) lerpYRot : getYRot();
-    }
-
-    // The ship is immune to everything (spec: no health for now).
-
-    @Override
-    public boolean hurt(DamageSource source, float amount) {
-        return false;
-    }
-
-    @Override
-    public void kill() {
-    }
-
-    @Override
-    public boolean ignoreExplosion(Explosion explosion) {
-        return true;
-    }
-
-    @Override
-    public boolean isAttackable() {
-        return false;
-    }
-
-    @Override
-    public boolean isPickable() {
-        return !isRemoved();
-    }
-
-    @Override
-    public boolean isPushable() {
-        return false;
-    }
-
     @Override
     public void remove(RemovalReason reason) {
         if (level() instanceof ServerLevel level) {
             clearMining(level);
+            ShipState ship = ShipManager.get(level.getServer()).get(getUUID());
+            if (ship != null) {
+                removeHeadlight(level, ship);
+            }
         }
         super.remove(reason);
-    }
-
-    // Nothing to save: see ShipState.
-
-    @Override
-    protected void readAdditionalSaveData(CompoundTag tag) {
-    }
-
-    @Override
-    protected void addAdditionalSaveData(CompoundTag tag) {
     }
 }

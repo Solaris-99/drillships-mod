@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import com.solaris99.drillship.block.ShipInteriorBlock;
 import com.solaris99.drillship.entity.DrillshipEntity;
+import com.solaris99.drillship.entity.WagonEntity;
 import com.solaris99.drillship.registry.ModKeys;
 
 import net.minecraft.core.BlockPos;
@@ -53,14 +54,20 @@ public final class ShipTicker {
         PENDING_RETURNS.clear();
     }
 
-    /** Respawns the exterior whenever its chunk is loaded and the entity is missing. */
+    /** Respawns each section's exterior whenever its chunk is loaded and the entity is missing. */
     private static void ensureEntity(MinecraftServer server, ShipState ship) {
         ServerLevel level = server.getLevel(ship.dimension());
-        if (level == null || level.getEntity(ship.id()) != null) {
+        if (level == null) {
             return;
         }
-        if (level.isPositionEntityTicking(BlockPos.containing(ship.position()))) {
+        if (level.getEntity(ship.id()) == null && level.isPositionEntityTicking(BlockPos.containing(ship.position()))) {
             level.addFreshEntity(DrillshipEntity.create(level, ship));
+        }
+        for (int wagon = 1; wagon <= ship.wagonCount(); wagon++) {
+            if (level.getEntity(ship.wagonId(wagon)) == null
+                    && level.isPositionEntityTicking(BlockPos.containing(ship.wagonPose(wagon).position()))) {
+                level.addFreshEntity(WagonEntity.create(level, ship, wagon));
+            }
         }
     }
 

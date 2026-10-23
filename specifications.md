@@ -50,8 +50,8 @@ The hull is one block thick, so the exterior is the interior plus 2 in each dire
 ## 3. Driving
 
 ### Getting in and out
-- **Enter:** right-click the ship's exterior.
-- **Leave:** use the door (or a hatch module). The player is placed beside, behind or on top of the ship, whichever has room. If none has room, a "the way out is blocked" message is shown.
+- **Enter:** right-click the drillhead's exterior, or a wagon's exterior to enter that wagon.
+- **Leave:** use the door (or a hatch module). The player is placed beside the drillhead, behind it (only when no wagons are attached) or on top of it, whichever has room. If none has room, a "the way out is blocked" message is shown.
 - **Drive:** use the helm. The player is moved to the exterior and seated at the front of the drill, looking through the periscope. This causes a short dimension-change loading screen.
 - **Stop driving:** Shift. The player returns to the helm.
 - A player who logs out while driving logs back in at the helm.
@@ -65,6 +65,14 @@ The hull is one block thick, so the exterior is the interior plus 2 in each dire
 | Space / Ctrl | Pitch up / down (limited to ±30°) |
 | F | Toggle the drill (rebindable; only active while driving) |
 | Shift | Stop driving |
+
+### Driver HUD
+While driving, a HUD styled like an old military terminal (green monospace text on dark panels with scanlines) shows:
+- **Attitude indicator** (top right): an artificial horizon with a pitch ladder, plus heading (degrees and compass point) and pitch.
+- **Power:** a bar, percentage and FE stored / capacity.
+- **Drill:** on/off and durability.
+- **Speed.**
+- **Warnings**, blinking: inventory full, no/low power, no drill, drill broken/worn, path blocked.
 
 *Later:* steering with the mouse through the periscope, with two modes. **Drive** mode, used while moving, limits the view to the front of the ship. **Free look** mode, only available while stopped, lets the player look around freely.
 
@@ -130,6 +138,7 @@ The drillhead is the only required section. Its built-in fixtures are fixed and 
 | **Storage access** | Opens the ship's inventory. |
 | **Crafting table** | A normal crafting table. |
 | **Door** | Exit. |
+| **Headlights** | Light up the area in front of the drillhead while the engine runs (see below). |
 
 ### Status panel
 - **Shows:**
@@ -143,7 +152,7 @@ The drillhead is the only required section. Its built-in fixtures are fixed and 
 - **Controls:**
   - drill on/off
   - automatic fuel on/off
-  - wagons: list, add, pick up
+  - wagons: a wagon slot (a wagon placed in it is attached right away) and a button to detach the last wagon
   - tesla turrets on/off
   - picking the ship up
 - **Warnings:** no energy, low energy (< 10%), inventory full, no drill, drill broken, drill worn, path blocked.
@@ -155,6 +164,11 @@ The drillhead is the only required section. Its built-in fixtures are fixed and 
 - **Automatic fuel:** it pulls fuel from the ship's inventory automatically *(in-game toggle)*.
 - **No upgrades.** To bring in other power, players use an Energy IO module.
 
+### Headlights
+- On while the engine runs, i.e. while someone is driving and the ship has energy. No energy cost.
+- Kept simple on purpose: not a directional beam, just one light source (level 15) inside the front of the hull, lighting a radius around the front of the drillhead.
+- It is an invisible vanilla light block that moves with the ship (waterlogged under water) and is removed when the engine stops or the ship is picked up.
+
 ### Radar
 - **What it detects:** all ores by default *(config: list of block tags)*.
 - **Display:** top-down. A large group of ores shows as a bright point and a small deposit as a faint one. An up or down arrow on a point shows that the ore is above or below the ship.
@@ -165,10 +179,12 @@ The drillhead is the only required section. Its built-in fixtures are fixed and 
 
 ## 7. Wagons
 
-- Wagons follow the drillhead's path like train cars.
+- Wagons follow the drillhead's path like train cars: both ends of a wagon ride on the path the drillhead travelled, with a 0.5-block gap between sections. When the drillhead reverses, the wagons are pushed back along the same path.
+- Wagons ride through the tunnel the drillhead dug and don't collide with blocks themselves. Turning the drillhead in place doesn't move them.
 - A wagon must be the same tier as its ship. The limit is 3 / 5 / 8 wagons per tier.
-- **Adding:** craft a wagon item and insert it through the status panel. It needs free air behind the ship; otherwise a "something is blocking the wagon" message is shown.
-- **Removing:** a wagon can be picked up from the status panel once it's empty.
+- **Interior:** an empty room (no fixtures, no lamp), joined to the section in front of it by a 1 × 2 passage. Players can also enter a wagon directly by right-clicking its exterior.
+- **Adding:** craft a wagon item and put it in the status panel's wagon slot. It needs free space behind the last section; otherwise a "something is blocking the wagon" message is shown and the item stays in the slot.
+- **Removing:** only the last wagon can be detached, so the chain never has gaps. It must be empty (no blocks or entities inside). The wagon item goes back to the player and the passage is sealed.
 - **Inventory:** wagons don't add inventory slots. Players extend storage themselves with inventory access modules and pipes.
 
 ### Picking up the whole ship
@@ -249,6 +265,14 @@ Passengers inside a moving ship never take damage from it.
   - It then checks whether the matching tag already contains another mod's item, to catch less popular mods.
   - Items are always registered, because Minecraft can't register them conditionally. When another mod provides the material, our own world generation and recipes are disabled and the items are hidden in JEI.
 - **The alloy furnace and its recipes** are only offered when no other mod provides a way to make the alloys.
+
+### Large ore deposits
+- **Shape:** roughly a sphere, 28 to 48 blocks in diameter.
+- **Rarity:** very rare, comparable in feel to ancient debris. *(default: about 1 deposit per 500 chunks, config)*
+- **Contents:** one ore type per deposit, chosen from the overworld ores in the `c:ores` tag, so other mods' ores can appear. *(default)*
+- **Depth:** centered between Y −40 and Y 40. *(default)*
+- **Generation:** added on top of normal ore generation, not replacing it. Can be turned off *(config)*.
+- The radar shows deposits as bright points.
 
 ### Alloy furnace
 A standalone block (and a module). It works like a furnace with two inputs and burns furnace fuel.
@@ -432,7 +456,7 @@ Textures and sounds are supplied by the author. Missing assets use vanilla place
 |--|--|
 | `hull` | Interior walls and the exterior hull |
 | `periscope` | Helm |
-| `status` | Status panel. It has no separate warning texture; the panel lights up instead. |
+| `status` | Status panel. It has no separate warning texture; the panel lights up instead (this may change later). |
 | `engine_off` / `engine_on` | Generator, idle / burning |
 | `inventory_io` | Storage access |
 | `crafting_module` | Built-in crafting table |
@@ -464,7 +488,7 @@ All four are mono, so they fade with distance. Stereo originals are kept in `art
    - Drill durability, repair and enchanting.
    - Chunk loading and pickup.
    - Basic-tier recipes.
-2. **Wagons.**
+2. **Wagons, headlights and driver HUD: done.**
 3. **Modules and wrench.**
 4. **Tesla turrets.**
 5. **Standard and hardened tiers, materials and alloys.**
@@ -474,7 +498,4 @@ All four are mono, so they fade with distance. Stereo originals are kept in `art
 
 ## 17. Open questions
 
-1. **Large ore deposits** (README): size, shape, rarity, depth range, which ores (vanilla only, or other mods' ores via tags), whether they replace or add to normal ore generation, and whether they can be toggled in the config.
-2. **Alloy recipes:** the ratios and times in section 11 are proposals. Confirm or change them.
-3. **Status panel warning:** keep the light-up indicator, or add a separate warning texture?
-4. **Wagon interiors:** do wagons have any built-in fixtures (a door, a lamp), or are they empty rooms?
+1. **Ore deposits:** the frequency, ore selection and depth range in section 11 are defaults. Confirm them when the feature is built.

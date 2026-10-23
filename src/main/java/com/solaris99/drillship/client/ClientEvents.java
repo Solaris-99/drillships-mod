@@ -64,6 +64,7 @@ public final class ClientEvents {
         LocalPlayer player = minecraft.player;
         if (!isDriving(player)) {
             lastInput = null;
+            ModNetwork.ShipStatus.latest = null;
             return;
         }
         while (TOGGLE_DRILL.consumeClick()) {

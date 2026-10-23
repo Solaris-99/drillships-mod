@@ -17,6 +17,7 @@ public class StatusScreen extends AbstractContainerScreen<StatusMenu> {
     private static final int TEXT = 0x404040;
     private static final int WARNING = 0xB02020;
     private static final int LINE_HEIGHT = 10;
+    private static final int BUTTONS_TOP = StatusMenu.INVENTORY_Y - 54;
     private static final int[] WARNING_FLAGS = {
             ShipState.WARN_NO_ENERGY, ShipState.WARN_LOW_ENERGY, ShipState.WARN_INVENTORY_FULL, ShipState.WARN_NO_DRILL,
             ShipState.WARN_DRILL_BROKEN, ShipState.WARN_DRILL_WORN, ShipState.WARN_BLOCKED,
@@ -38,13 +39,15 @@ public class StatusScreen extends AbstractContainerScreen<StatusMenu> {
     @Override
     protected void init() {
         super.init();
-        int y = topPos + StatusMenu.INVENTORY_Y - 34;
+        int top = topPos + BUTTONS_TOP;
         drillButton = addRenderableWidget(Button.builder(Component.empty(), b -> press(StatusMenu.BUTTON_TOGGLE_DRILL))
-                .bounds(leftPos + 7, y, 54, 18).build());
+                .bounds(leftPos + 7, top, 80, 18).build());
         autoFuelButton = addRenderableWidget(Button.builder(Component.empty(), b -> press(StatusMenu.BUTTON_TOGGLE_AUTO_FUEL))
-                .bounds(leftPos + 63, y, 54, 18).build());
+                .bounds(leftPos + 89, top, 80, 18).build());
+        addRenderableWidget(Button.builder(Component.translatable("gui.drillships.detach_wagon"), b -> press(StatusMenu.BUTTON_DETACH_WAGON))
+                .bounds(leftPos + 7, top + 20, 80, 18).build());
         addRenderableWidget(Button.builder(Component.translatable("gui.drillships.pick_up"), b -> press(StatusMenu.BUTTON_PICK_UP))
-                .bounds(leftPos + 119, y, 50, 18).build());
+                .bounds(leftPos + 89, top + 20, 80, 18).build());
     }
 
     private void press(int button) {
@@ -77,10 +80,11 @@ public class StatusScreen extends AbstractContainerScreen<StatusMenu> {
         }
         graphics.drawString(font, Component.translatable("gui.drillships.drill_slot"), StatusMenu.DRILL_SLOT_X - 2, StatusMenu.DRILL_SLOT_Y + 18, TEXT, false);
         graphics.drawString(font, Component.translatable("gui.drillships.fuel_slot"), StatusMenu.FUEL_SLOT_X - 2, StatusMenu.FUEL_SLOT_Y + 18, TEXT, false);
+        graphics.drawString(font, Component.translatable("gui.drillships.wagon_slot"), StatusMenu.WAGON_SLOT_X - 6, StatusMenu.WAGON_SLOT_Y + 18, TEXT, false);
 
         y += 2;
         int warnings = menu.get(StatusMenu.WARNINGS);
-        for (int i = 0; i < WARNING_FLAGS.length && y < StatusMenu.INVENTORY_Y - 36; i++) {
+        for (int i = 0; i < WARNING_FLAGS.length && y + LINE_HEIGHT <= BUTTONS_TOP; i++) {
             if ((warnings & WARNING_FLAGS[i]) != 0) {
                 graphics.drawString(font, Component.literal("⚠ ").append(Component.translatable("warning.drillships." + WARNING_KEYS[i])), x, y, WARNING, false);
                 y += LINE_HEIGHT;
@@ -99,6 +103,7 @@ public class StatusScreen extends AbstractContainerScreen<StatusMenu> {
         lines.add(max > 0
                 ? Component.translatable("gui.drillships.drill", 100 - menu.get(StatusMenu.DRILL_DAMAGE) * 100L / max)
                 : Component.translatable("gui.drillships.drill_none"));
+        lines.add(Component.translatable("gui.drillships.wagons", menu.get(StatusMenu.WAGONS), menu.get(StatusMenu.MAX_WAGONS)));
         lines.add(Component.translatable("gui.drillships.speed", String.format("%.1f", menu.get(StatusMenu.SPEED_TENTHS) / 10.0)));
         lines.add(Component.translatable("gui.drillships.position", menu.get(StatusMenu.X), menu.get(StatusMenu.Y), menu.get(StatusMenu.Z))
                 .withStyle(ChatFormatting.DARK_GRAY));

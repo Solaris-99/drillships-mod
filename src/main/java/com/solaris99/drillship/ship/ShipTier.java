@@ -77,6 +77,10 @@ public enum ShipTier {
         return DRILLHEAD_LENGTH + 2;
     }
 
+    public int wagonExteriorLength() {
+        return wagonLength + 2;
+    }
+
     public int inventorySlots() {
         return inventorySlots;
     }

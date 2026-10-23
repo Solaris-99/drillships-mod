@@ -1,5 +1,8 @@
 package com.solaris99.drillship.ship;
 
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.function.Predicate;
 
@@ -8,13 +11,18 @@ import javax.annotation.Nullable;
 import com.solaris99.drillship.entity.DrillshipEntity;
 import com.solaris99.drillship.item.DrillItem;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtUtils;
+import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
@@ -35,6 +43,10 @@ public class ShipState {
 
     // How long transient warnings stay lit after the last time they happened.
     private static final int WARNING_TICKS = 100;
+    // Wagons follow the drillhead's recorded path; a point is recorded every PATH_SPACING blocks travelled.
+    private static final double PATH_SPACING = 0.25;
+    // Space between consecutive sections, so wagons can turn without overlapping.
+    private static final double COUPLING_GAP = 0.5;
 
     private final ShipManager manager;
     private final UUID id;
@@ -53,6 +65,12 @@ public class ShipState {
     private int burnDuration;
     private boolean drillOn;
     private boolean autoFuel = true;
+    private int wagonCount;
+    // Positions of the drillhead's origin, oldest first.
+    private final List<Vec3> path = new ArrayList<>();
+    // The light block placed by the headlights, so it can be removed even after a restart.
+    @Nullable
+    private BlockPos headlight;
 
     // Not saved
     private double speed;
@@ -129,6 +147,105 @@ public class ShipState {
         this.yaw = yaw;
         this.pitch = pitch;
         this.speed = speed;
+        recordPath();
+        manager.setDirty();
+    }
+
+    // Wagons
+
+    public int wagonCount() {
+        return wagonCount;
+    }
+
+    public void setWagonCount(int wagonCount) {
+        this.wagonCount = wagonCount;
+        trimPath();
+        manager.setDirty();
+    }
+
+    /** Each wagon's exterior entity has a fixed id derived from the ship's. Wagons are numbered from 1. */
+    public UUID wagonId(int wagon) {
+        return UUID.nameUUIDFromBytes((id + "/wagon/" + wagon).getBytes(StandardCharsets.UTF_8));
+    }
+
+    public record Pose(Vec3 position, float yaw, float pitch) {
+        public ShipShape.Frame frame() {
+            return ShipShape.Frame.of(position, yaw, pitch);
+        }
+    }
+
+    /**
+     * Where a wagon sits, like a train car: both its ends lie on the drillhead's path and its body spans the chord
+     * between them.
+     */
+    public Pose wagonPose(int wagon) {
+        double length = tier.wagonExteriorLength();
+        double front = -ShipShape.drillhead(tier).back + COUPLING_GAP + (wagon - 1) * (length + COUPLING_GAP);
+        Vec3 frontEnd = pointBehind(front);
+        Vec3 backEnd = pointBehind(front + length);
+        Vec3 direction = frontEnd.subtract(backEnd);
+        float wagonYaw = (float) (Mth.atan2(-direction.x, direction.z) * Mth.RAD_TO_DEG);
+        float wagonPitch = (float) (-Math.asin(Mth.clamp(direction.y / direction.length(), -1.0, 1.0)) * Mth.RAD_TO_DEG);
+        return new Pose(frontEnd.add(backEnd).scale(0.5), wagonYaw, wagonPitch);
+    }
+
+    /** The point {@code distance} blocks behind the drillhead along its path, extended straight back past its end. */
+    private Vec3 pointBehind(double distance) {
+        Vec3 previous = position;
+        Vec3 direction = ShipShape.Frame.of(Vec3.ZERO, yaw, pitch).forward().reverse();
+        double remaining = distance;
+        for (int i = path.size() - 1; i >= 0; i--) {
+            Vec3 next = path.get(i);
+            double segment = previous.distanceTo(next);
+            if (segment < 1.0E-6) {
+                continue;
+            }
+            if (remaining <= segment) {
+                return previous.lerp(next, remaining / segment);
+            }
+            remaining -= segment;
+            direction = next.subtract(previous).normalize();
+            previous = next;
+        }
+        return previous.add(direction.scale(remaining));
+    }
+
+    private void recordPath() {
+        // Reversing: drop recorded points that are now ahead of the drillhead, so wagons get pushed back along the path.
+        Vec3 forward = ShipShape.Frame.of(Vec3.ZERO, yaw, pitch).forward();
+        while (!path.isEmpty() && path.get(path.size() - 1).subtract(position).dot(forward) > 1.0E-3) {
+            path.remove(path.size() - 1);
+        }
+        if (path.isEmpty() || position.distanceTo(path.get(path.size() - 1)) >= PATH_SPACING) {
+            path.add(position);
+            trimPath();
+        }
+    }
+
+    // Keep just enough path for the last wagon.
+    private void trimPath() {
+        double needed = -ShipShape.drillhead(tier).back + wagonCount * (tier.wagonExteriorLength() + COUPLING_GAP) + 1.0;
+        double length = 0;
+        Vec3 previous = position;
+        for (int i = path.size() - 1; i >= 0; i--) {
+            length += previous.distanceTo(path.get(i));
+            previous = path.get(i);
+            if (length > needed) {
+                path.subList(0, i).clear();
+                return;
+            }
+        }
+    }
+
+    // Headlights
+
+    @Nullable
+    public BlockPos headlight() {
+        return headlight;
+    }
+
+    public void setHeadlight(@Nullable BlockPos headlight) {
+        this.headlight = headlight;
         manager.setDirty();
     }
 
@@ -330,6 +447,19 @@ public class ShipState {
         tag.putInt("BurnDuration", burnDuration);
         tag.putBoolean("DrillOn", drillOn);
         tag.putBoolean("AutoFuel", autoFuel);
+        tag.putInt("Wagons", wagonCount);
+        ListTag pathTag = new ListTag();
+        for (Vec3 point : path) {
+            CompoundTag pointTag = new CompoundTag();
+            pointTag.putDouble("X", point.x);
+            pointTag.putDouble("Y", point.y);
+            pointTag.putDouble("Z", point.z);
+            pathTag.add(pointTag);
+        }
+        tag.put("Path", pathTag);
+        if (headlight != null) {
+            tag.put("Headlight", NbtUtils.writeBlockPos(headlight));
+        }
         tag.put("Inventory", inventory.serializeNBT(registries));
         tag.put("Fuel", fuel.serializeNBT(registries));
         tag.put("Drill", drill.serializeNBT(registries));
@@ -347,6 +477,12 @@ public class ShipState {
         ship.burnDuration = tag.getInt("BurnDuration");
         ship.drillOn = tag.getBoolean("DrillOn");
         ship.autoFuel = tag.getBoolean("AutoFuel");
+        ship.wagonCount = tag.getInt("Wagons");
+        for (Tag entry : tag.getList("Path", Tag.TAG_COMPOUND)) {
+            CompoundTag point = (CompoundTag) entry;
+            ship.path.add(new Vec3(point.getDouble("X"), point.getDouble("Y"), point.getDouble("Z")));
+        }
+        ship.headlight = NbtUtils.readBlockPos(tag, "Headlight").orElse(null);
         ship.inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
         ship.fuel.deserializeNBT(registries, tag.getCompound("Fuel"));
         ship.drill.deserializeNBT(registries, tag.getCompound("Drill"));

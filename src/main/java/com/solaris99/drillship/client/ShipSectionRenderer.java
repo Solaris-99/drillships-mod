@@ -8,6 +8,7 @@ import java.util.Map;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import com.solaris99.drillship.entity.DrillshipEntity;
+import com.solaris99.drillship.entity.ShipSectionEntity;
 import com.solaris99.drillship.registry.ModBlocks;
 import com.solaris99.drillship.ship.ShipShape;
 import com.solaris99.drillship.ship.ShipTier;
@@ -25,8 +26,8 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
-/** Placeholder look: a box of hull blocks with a spinning iron-block drill face. */
-public class DrillshipRenderer extends EntityRenderer<DrillshipEntity> {
+/** Placeholder look: a box of hull blocks; the drillhead adds a spinning iron-block drill face. One instance per section type. */
+public class ShipSectionRenderer<T extends ShipSectionEntity> extends EntityRenderer<T> {
     private static final BlockState DRILL = Blocks.IRON_BLOCK.defaultBlockState();
     private static final BlockState WORN_DRILL = Blocks.RAW_IRON_BLOCK.defaultBlockState();
 
@@ -35,14 +36,14 @@ public class DrillshipRenderer extends EntityRenderer<DrillshipEntity> {
     // Min corners of the hull's outer layer of blocks, in ship-local coordinates.
     private final Map<ShipTier, List<Vec3>> hullShells = new EnumMap<>(ShipTier.class);
 
-    public DrillshipRenderer(EntityRendererProvider.Context context) {
+    public ShipSectionRenderer(EntityRendererProvider.Context context) {
         super(context);
         this.blocks = context.getBlockRenderDispatcher();
         this.shadowRadius = 0.0F;
     }
 
     @Override
-    public void render(DrillshipEntity ship, float entityYaw, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int packedLight) {
+    public void render(T ship, float entityYaw, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int packedLight) {
         // The driver looks through the periscope; the hull would block the view.
         Minecraft minecraft = Minecraft.getInstance();
         if (ship.hasPassenger(minecraft.player) && minecraft.options.getCameraType().isFirstPerson()) {
@@ -57,6 +58,14 @@ public class DrillshipRenderer extends EntityRenderer<DrillshipEntity> {
             renderBlock(hull, block.x, block.y, block.z, poseStack, buffers, packedLight);
         }
 
+        if (ship instanceof DrillshipEntity drillhead) {
+            renderDrill(drillhead, shape, partialTick, poseStack, buffers, packedLight);
+        }
+        poseStack.popPose();
+        super.render(ship, entityYaw, partialTick, poseStack, buffers, packedLight);
+    }
+
+    private void renderDrill(DrillshipEntity ship, ShipShape shape, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int packedLight) {
         poseStack.pushPose();
         poseStack.translate(0, shape.height / 2, 0);
         poseStack.mulPose(Axis.ZP.rotationDegrees(ship.getDrillAngle(partialTick)));
@@ -69,9 +78,6 @@ public class DrillshipRenderer extends EntityRenderer<DrillshipEntity> {
             }
         }
         poseStack.popPose();
-
-        poseStack.popPose();
-        super.render(ship, entityYaw, partialTick, poseStack, buffers, packedLight);
     }
 
     private void renderBlock(BlockState state, double x, double y, double z, PoseStack poseStack, MultiBufferSource buffers, int packedLight) {
@@ -99,7 +105,7 @@ public class DrillshipRenderer extends EntityRenderer<DrillshipEntity> {
     }
 
     @Override
-    public ResourceLocation getTextureLocation(DrillshipEntity ship) {
+    public ResourceLocation getTextureLocation(T ship) {
         return InventoryMenu.BLOCK_ATLAS;
     }
 }

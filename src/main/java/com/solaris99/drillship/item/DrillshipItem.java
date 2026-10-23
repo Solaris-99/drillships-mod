@@ -64,7 +64,7 @@ public class DrillshipItem extends Item {
         float yaw = player != null ? Math.round(player.getYRot() / 90.0F) * 90.0F : 0.0F;
         BlockPos base = context.getClickedPos().relative(context.getClickedFace());
         Vec3 forward = ShipShape.Frame.of(Vec3.ZERO, yaw, 0.0F).forward();
-        Vec3 origin = Vec3.atBottomCenterOf(base).add(forward.scale(-new ShipShape(tier).back));
+        Vec3 origin = Vec3.atBottomCenterOf(base).add(forward.scale(-ShipShape.drillhead(tier).back));
         if (place(level, tier, origin, yaw, installedDrill(context.getItemInHand())) == null) {
             message(player, "message.drillships.no_space");
             return InteractionResult.FAIL;
@@ -77,7 +77,7 @@ public class DrillshipItem extends Item {
     @Nullable
     public static ShipState place(ServerLevel level, ShipTier tier, Vec3 origin, float yaw, ItemStack drill) {
         ServerLevel interior = level.getServer().getLevel(ModKeys.INTERIOR);
-        if (interior == null || !DrillshipEntity.isSpaceClear(level, ShipShape.Frame.of(origin, yaw, 0.0F), new ShipShape(tier))) {
+        if (interior == null || !DrillshipEntity.isSpaceClear(level, ShipShape.Frame.of(origin, yaw, 0.0F), ShipShape.drillhead(tier))) {
             return null;
         }
         ShipState ship = ShipManager.get(level.getServer()).create(tier, level.dimension(), origin, yaw);

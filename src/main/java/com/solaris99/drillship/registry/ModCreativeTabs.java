@@ -18,6 +18,7 @@ public final class ModCreativeTabs {
             .icon(() -> ModItems.BASIC_DRILLSHIP.get().getDefaultInstance())
             .displayItems((parameters, output) -> {
                 output.accept(ModItems.BASIC_DRILLSHIP.get());
+                output.accept(ModItems.BASIC_WAGON.get());
                 output.accept(ModItems.BASIC_DRILL.get());
                 output.accept(ModItems.BASIC_ENGINE.get());
                 output.accept(ModItems.BASIC_HULL.get());

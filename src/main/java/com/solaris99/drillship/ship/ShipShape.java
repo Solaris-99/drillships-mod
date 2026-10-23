@@ -9,23 +9,35 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Geometry of a drillship's exterior. Local coordinates: x across (right is positive), y up from the hull's bottom,
- * z along the ship (forward is positive). The origin is the center of the hull's bottom face.
+ * Geometry of one ship section's exterior (the drillhead or a wagon). Local coordinates: x across (right is positive),
+ * y up from the hull's bottom, z along the ship (forward is positive). The origin is the center of the hull's bottom face.
  */
 public final class ShipShape {
     public final double halfWidth;
     public final double height;
     public final double back;
     public final double hullFront;
+    /** Equal to {@link #hullFront} for sections without a drill. */
     public final double drillFront;
 
-    public ShipShape(ShipTier tier) {
-        double length = tier.drillheadExteriorLength();
+    private ShipShape(ShipTier tier, int length, double drillDepth) {
         this.halfWidth = tier.exteriorWidth() / 2.0;
         this.height = tier.exteriorHeight();
         this.back = -length / 2.0;
         this.hullFront = length / 2.0;
-        this.drillFront = hullFront + 1.0;
+        this.drillFront = hullFront + drillDepth;
+    }
+
+    public static ShipShape drillhead(ShipTier tier) {
+        return new ShipShape(tier, tier.drillheadExteriorLength(), 1.0);
+    }
+
+    public static ShipShape wagon(ShipTier tier) {
+        return new ShipShape(tier, tier.wagonExteriorLength(), 0.0);
+    }
+
+    public double hullLength() {
+        return hullFront - back;
     }
 
     public int faceArea() {
