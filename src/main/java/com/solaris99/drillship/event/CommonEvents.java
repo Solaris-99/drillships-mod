@@ -1,8 +1,11 @@
 package com.solaris99.drillship.event;
 
 import com.solaris99.drillship.entity.DrillshipEntity;
+import com.solaris99.drillship.block.ModuleBlock;
 import com.solaris99.drillship.item.DrillItem;
+import com.solaris99.drillship.registry.ModTags;
 import com.solaris99.drillship.ship.ShipManager;
+import com.solaris99.drillship.ship.ShipModules;
 import com.solaris99.drillship.ship.ShipState;
 import com.solaris99.drillship.ship.ShipTicker;
 import com.solaris99.drillship.ship.ShipTravel;
@@ -10,7 +13,9 @@ import com.solaris99.drillship.ship.ShipTravel;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.IEventBus;
@@ -70,10 +75,20 @@ public final class CommonEvents {
         }
     }
 
-    // The driver is looking through the periscope and can't reach the world.
+    // The driver is looking through the periscope and can't reach the world. Shift + right-click with any wrench takes
+    // a module out of the hull; vanilla would skip the block's own handling while sneaking with an item.
     private static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
         if (event.getEntity().getVehicle() instanceof DrillshipEntity) {
             event.setCanceled(true);
+            return;
+        }
+        if (event.getEntity().isSecondaryUseActive() && event.getItemStack().is(ModTags.WRENCHES)
+                && event.getLevel().getBlockState(event.getPos()).getBlock() instanceof ModuleBlock) {
+            if (event.getLevel() instanceof ServerLevel level) {
+                ShipModules.remove(level, event.getPos(), event.getEntity());
+            }
+            event.setCanceled(true);
+            event.setCancellationResult(InteractionResult.sidedSuccess(event.getLevel().isClientSide()));
         }
     }
 

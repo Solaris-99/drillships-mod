@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "lit=false": {
+      "model": "drillships:block/furnace_module"
+    },
+    "lit=true": {
+      "model": "drillships:block/furnace_module_lit"
+    }
+  }
+}

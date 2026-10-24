@@ -8,6 +8,7 @@ import javax.annotation.Nullable;
 import com.solaris99.drillship.entity.DrillshipEntity;
 import com.solaris99.drillship.entity.ShipSectionEntity;
 import com.solaris99.drillship.item.DrillshipItem;
+import com.solaris99.drillship.item.ShipLocatorItem;
 import com.solaris99.drillship.registry.ModKeys;
 
 import net.minecraft.core.BlockPos;
@@ -37,6 +38,7 @@ public final class ShipTravel {
             return;
         }
         openDoor(player.server, ship, section);
+        ShipLocatorItem.remember(player, ship);
         Vec3 point = ship.layout().doorEntry(section);
         // Facing into the room, away from the door in the min-X wall.
         player.teleportTo(interior, point.x, point.y, point.z, -90.0F, 0.0F);
@@ -63,6 +65,7 @@ public final class ShipTravel {
         }
         player.teleportTo((ServerLevel) entity.level(), entity.getX(), entity.getY(), entity.getZ(), entity.getYRot(), entity.getXRot());
         player.startRiding(entity, true);
+        ShipLocatorItem.remember(player, ship);
     }
 
     /** Leaves through a section's door: the player steps out beside it, facing away from the ship. */
@@ -89,10 +92,8 @@ public final class ShipTravel {
         if (level == null) {
             return null;
         }
-        ShipShape shape = section == 0 ? ShipShape.drillhead(ship.tier()) : ShipShape.wagon(ship.tier());
-        ShipShape.Frame frame = section == 0
-                ? ShipShape.Frame.of(ship.position(), ship.yaw(), 0.0F)
-                : ShipShape.Frame.of(ship.wagonPose(section).position(), ship.wagonPose(section).yaw(), 0.0F);
+        ShipShape shape = shape(ship, section);
+        ShipShape.Frame frame = exitFrame(ship, section);
         double side = shape.halfWidth + 0.8, door = shape.back + 2.5;
         Vec3 atDoor = frame.toWorld(side, 0, door);
         for (Vec3 candidate : List.of(atDoor, frame.toWorld(side, 1, door))) {
@@ -115,6 +116,71 @@ public final class ShipTravel {
             }
         }
         return null;
+    }
+
+    /**
+     * Leaves through a door or hatch module at {@code pos} (a door's lower half): out of the hull beside a door module,
+     * onto the roof above a ceiling hatch, or under the ship below a floor hatch. Blocks in the way are cut as at the
+     * section's door. Failing that, or where a door module would open onto the next section, the player leaves through
+     * the section's own door.
+     */
+    public static void exitThroughModule(ServerPlayer player, ShipState ship, BlockPos pos) {
+        int section = ship.layout().sectionAt(pos);
+        ServerLevel level = player.server.getLevel(ship.dimension());
+        if (section < 0 || level == null) {
+            return;
+        }
+        InteriorLayout.Room room = ship.layout().room(section);
+        ShipShape shape = shape(ship, section);
+        ShipShape.Frame frame = exitFrame(ship, section);
+        int x = pos.getX() - room.origin().getX(), y = pos.getY() - room.origin().getY(), z = pos.getZ() - room.origin().getZ();
+        // The interior's min-X wall is the exterior's right side, where the section's own door is.
+        double across = shape.halfWidth - (x + 0.5), along = shape.back + z + 0.5;
+        float yaw = section == 0 ? ship.yaw() : ship.wagonPose(section).yaw();
+        List<Vec3> candidates = new ArrayList<>();
+        if (y == 0) {
+            candidates.add(frame.toWorld(across, -player.getDimensions(Pose.STANDING).height() - 0.05, along));
+        } else if (y == room.sizeY() - 1) {
+            candidates.add(frame.toWorld(across, shape.height + 0.05, along));
+        } else if (x == 0 || x == room.sizeX() - 1) {
+            double side = (x == 0 ? 1 : -1) * (shape.halfWidth + 0.8);
+            candidates.add(frame.toWorld(side, y - 1, along));
+            candidates.add(frame.toWorld(side, y, along));
+            yaw += x == 0 ? 90.0F : -90.0F;
+        } else if (z == 0 && section == ship.wagonCount()) {
+            candidates.add(frame.toWorld(across, y - 1, shape.back - 0.8));
+            candidates.add(frame.toWorld(across, y, shape.back - 0.8));
+            yaw += 180.0F;
+        } else if (z == room.sizeZ() - 1 && section == 0) {
+            candidates.add(frame.toWorld(across, y - 1, shape.drillFront + 0.8));
+            candidates.add(frame.toWorld(across, y, shape.drillFront + 0.8));
+        }
+        Vec3 exit = null;
+        for (Vec3 candidate : candidates) {
+            if (level.noBlockCollision(null, standing(player, candidate))) {
+                exit = candidate;
+                break;
+            }
+        }
+        if (exit == null && !candidates.isEmpty() && clearDoorway(player, ship, level, standing(player, candidates.get(0)))) {
+            exit = candidates.get(0);
+        }
+        if (exit == null) {
+            exitSection(player, ship, section);
+            return;
+        }
+        player.teleportTo(level, exit.x, exit.y, exit.z, yaw, 0.0F);
+    }
+
+    private static ShipShape shape(ShipState ship, int section) {
+        return section == 0 ? ShipShape.drillhead(ship.tier()) : ShipShape.wagon(ship.tier());
+    }
+
+    // Level, whatever the section's pitch.
+    private static ShipShape.Frame exitFrame(ShipState ship, int section) {
+        return section == 0
+                ? ShipShape.Frame.of(ship.position(), ship.yaw(), 0.0F)
+                : ShipShape.Frame.of(ship.wagonPose(section).position(), ship.wagonPose(section).yaw(), 0.0F);
     }
 
     private static AABB standing(ServerPlayer player, Vec3 feet) {
@@ -168,6 +234,10 @@ public final class ShipTravel {
         }
         if (ship.wagonCount() > 0) {
             player.displayClientMessage(Component.translatable("message.drillships.has_wagons"), true);
+            return;
+        }
+        if (ShipModules.hasModules(interior, ship.layout().room(0))) {
+            player.displayClientMessage(Component.translatable("message.drillships.has_modules"), true);
             return;
         }
         if (!ship.hasNoItems() || !Interiors.isEmpty(interior, ship.layout().room(0), player)) {

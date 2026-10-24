@@ -18,7 +18,7 @@ public final class ModCreativeTabs {
             .withTabsBefore(CreativeModeTabs.SPAWN_EGGS)
             .icon(() -> ModItems.BASIC_DRILLSHIP.get().getDefaultInstance())
             .displayItems((parameters, output) -> {
-                // One row per tier, then the upgrades.
+                // One row per tier, then the upgrades, then the modules.
                 for (String tier : new String[] {"basic", "standard", "hardened"}) {
                     for (String part : new String[] {"drillship", "wagon", "drill", "engine", "hull", "tread", "wheel", "drill_piece", "drill_shaft"}) {
                         output.accept(BuiltInRegistries.ITEM.get(Drillships.id(tier + "_" + part)));
@@ -29,6 +29,17 @@ public final class ModCreativeTabs {
                 output.accept(ModItems.ENGINE_OVERDRIVE_UPGRADE.get());
                 output.accept(ModItems.ANTIGRAVITY_UPGRADE.get());
                 output.accept(ModItems.INVENTORY_UPGRADE.get());
+                output.accept(ModItems.WRENCH.get());
+                output.accept(ModItems.MODULE_BASE.get());
+                output.accept(ModItems.CRAFTING_MODULE.get());
+                output.accept(ModItems.FURNACE_MODULE.get());
+                output.accept(ModItems.INVENTORY_ACCESS_MODULE.get());
+                output.accept(ModItems.INVENTORY_IO_MODULE.get());
+                output.accept(ModItems.CRAFTING_INVENTORY_ACCESS_MODULE.get());
+                output.accept(ModItems.ENERGY_IO_MODULE.get());
+                output.accept(ModItems.DOOR_MODULE.get());
+                output.accept(ModItems.HATCH_MODULE.get());
+                output.accept(ModItems.SHIP_LOCATOR.get());
             }).build());
 
     private ModCreativeTabs() {

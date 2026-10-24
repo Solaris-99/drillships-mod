@@ -55,6 +55,9 @@ public final class ShipWagons {
         if (interior == null) {
             return Component.translatable("message.drillships.unreachable");
         }
+        if (ShipModules.hasModules(interior, ship.layout().room(wagon))) {
+            return Component.translatable("message.drillships.wagon_has_modules");
+        }
         if (!Interiors.isWagonEmpty(interior, ship.layout(), wagon, player)) {
             return Component.translatable("message.drillships.wagon_not_empty");
         }

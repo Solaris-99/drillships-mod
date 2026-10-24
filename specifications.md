@@ -172,6 +172,7 @@ The cockpit blocks are built in, like the hull; they don't stop the ship from be
 ### Status panel
 - **Shows:**
   - energy
+  - FE/t in use: everything drawn from the buffer (movement, drill, upgrades, modules, FE pulled out through an Energy IO), averaged over the last second
   - warnings
   - fuel, with remaining burn time (an estimate, capped at 1 hour)
   - drill durability
@@ -258,22 +259,29 @@ Upgrades aren't blocks: they plug into upgrade panels in the drillhead's left wa
 
 ## 9. Modules
 
-Modules are fixtures installed into the hull from the inside:
-- **Installing:** right-click any interior wall block while holding the module. There's no limit on the number of modules.
-- **Removing:** Shift + right-click with a wrench. The wrench is crafted from copper in a Y pattern. Other mods' wrenches also work (`c:tools/wrench` tag).
+Modules are fixtures installed into the hull from the inside, in place of shell blocks:
+- **Installing:** right-click a free block of any room's hull, drillhead or wagon, while holding the module. Wall modules go into side or end wall blocks (plating, kick plate or pipes), not the corner beams, built-in fixtures, upgrade panels or passages. The door module takes two wall blocks, one above the other: the clicked one and the one above, or below where there's no room above. The hatch goes into a floor or ceiling block away from the walls. There's no limit on the number of modules. Modules are indestructible, like the hull.
+- **Removing:** Shift + right-click with a wrench. The module comes back to the player along with anything it held (a furnace's items), and the hull block that was there comes back. The wrench is crafted from copper in a Y pattern. Other mods' wrenches also work (`c:tools/wrench` tag).
+- **Picking up the ship** or detaching a wagon is refused while that room has modules, with a message to take them out with a wrench first.
 
 | Module | Behaviour |
 |--|--|
 | Crafting table | A crafting table. |
-| Furnace | Vanilla smelting speed. Uses 20 FE/t only while smelting. Options *(in-game)*: auto-push output to the ship inventory, auto-pull input with a whitelist filter. |
-| Alloy furnace | Like the furnace module, with two inputs and the alloy recipes. |
-| Inventory access | Exposes the ship inventory to pipes and hoppers, with a filter on what is exposed. |
-| Crafting & inventory access | Both of the above in one block. |
-| Energy IO | Exposes the energy buffer. Input/output is switchable through its GUI or with the wrench. No rate limit by default; players can set limits *(in-game)*, capped by a config maximum *(config)*. |
-| Door | An extra exit. Can't be locked. |
-| Hatch | An exit (e.g. through the roof or floor). Can't be locked. |
-| Tesla turret (small / medium) | See below. |
-| Ship locator | Works like a compass: points to the last ship used. |
+| Furnace | An input and an output slot, no fuel: vanilla smelting speed on 20 FE/t from the buffer, drawn only while smelting; without enough energy it pauses ("No power"). No smelting XP. Options *(in-game)*, both off by default: push the output into the ship inventory, and pull input from it, only items on its 9-entry whitelist of ghost slots (an empty whitelist pulls nothing). It moves items once a second. Lit while smelting. |
+| Alloy furnace | Like the furnace module, with two inputs and the alloy recipes. *(Comes with roadmap step 5.)* |
+| Inventory access | Shows the ship's inventory, like the built-in storage access. |
+| Inventory IO | Its side exposes the ship inventory to pipes and hoppers. It never moves items on its own. Mode: input (they can only insert), output (only extract) or both (the default). A rate limit in items per second, each way, set with -64 / -8 / -1 / +1 / +8 / +64 and "No limit" (0, the default), and capped by `inventoryIoMaxRate` *(config, items/s, default 0 = no cap)*. A filter of 9 ghost slots, as a blacklist (the default, so an empty filter passes everything) or a whitelist, applied both ways; items it holds back are hidden from pipes. A plain right-click with a wrench also steps the mode. |
+| Crafting & inventory access | A crafting grid beside a page of the ship's inventory, in one wide screen (crafting on the left, the ship's page with its page buttons on the right, the player's inventory below). Shift-click moves between the player's inventory and the ship's; what's crafted goes to the player, and what doesn't fit there to the ship. |
+| Energy IO | Its side exposes the energy buffer. It never pushes on its own. Mode: input (the default; other blocks can push FE in), output (they can pull it out) or both. A rate limit in FE/t, each way, set with -1000 / -100 / -10 / +10 / +100 / +1000 and "No limit" (0, the default), and capped by `energyIoMaxRate` *(config, default 0 = no cap)*. A plain right-click with a wrench also steps the mode. |
+| Door | An extra exit, two blocks tall. Can't be locked. |
+| Hatch | An exit through the roof or the floor. Can't be locked. |
+| Tesla turret (small / medium) | See below. *(Roadmap step 4.)* |
+
+**Door and hatch exits.** Using one leaves the ship at that spot: out of the hull beside a door module (facing away from the wall), onto the roof above a ceiling hatch, or under the ship below a floor hatch. Blocks in the way are cut as at the section's door (section 3). Where that isn't allowed, or a door module in an end wall opens onto the next section, the player leaves through the section's own door. Entering is still through the section's door.
+
+**Ship locator.** Not installed: a compass, crafted from a compass and a module base, whose needle points to the drillhead of the last ship its holder entered (by a door or the helm). Like a compass in the Nether, it spins in other dimensions, inside the ship among them. Which ship that was is kept on the player, through death, and the needle updates once a second.
+
+The modules that keep settings or items (furnace, Inventory IO, Energy IO) are blocks with their own data in the interior's chunks, which stay loaded with the ship.
 
 ### Tesla turrets
 - **Placement:** roof only, in the middle of a wagon or the drillhead. Each section can have at most one turret.
@@ -294,6 +302,7 @@ All machines on the ship share one buffer (1M / 2M / 5M FE).
 | Moving | 1 FE/t *(config)*, plus 10 FE/t per engine overdrive |
 | Drilling | 1 FE/t per block of drill face while the drill spins, whether or not anything is being broken *(config)* |
 | Furnace / alloy furnace modules | 20 FE/t while smelting |
+| Energy IO module | Whatever other blocks push in or pull out, up to its limit |
 | Antigravity engine | 200 FE/t while installed |
 | Tesla turret | 100 FE per hit |
 
@@ -473,11 +482,14 @@ The module base is the same for every tier.
 | Furnace module | Furnace + module base |
 | Alloy furnace module | Alloy furnace + module base |
 | Inventory access module | Chest + module base |
+| Inventory IO module | Hopper + chest + module base |
 | Crafting module | Crafting table + module base |
 | Crafting & inventory access module | Crafting table + chest + module base |
-| Door module | Any door + module base |
-| Hatch module | Any trapdoor + module base |
+| Door module | Any door (`#minecraft:doors`) + module base |
+| Hatch module | Any trapdoor (`#minecraft:trapdoors`) + module base |
 | Ship locator | Compass + module base |
+
+Chests are any wooden chest (`#c:chests/wooden`).
 
 ---
 
@@ -502,8 +514,10 @@ Server config (`drillships-server.toml`):
 | `drillEnergyPerBlock` (FE/t) | 1 |
 | `drillDamage` | 20 |
 | `squashDamage` | 100 |
+| `energyIoMaxRate` (FE/t each way, 0 = no cap) | 0 |
+| `inventoryIoMaxRate` (items/s each way, 0 = no cap) | 0 |
 
-Options that come with later features: radar ore tags and radius per tier, Energy IO maximum rate.
+Options that come with later features: radar ore tags and radius per tier.
 
 ---
 
@@ -539,7 +553,9 @@ Textures and sounds are supplied by the author. Missing assets use vanilla place
 
 The chair, desk and consoles are block models with elements (the desk and console tops tilted 22.5°); the pod's roof and lamp reuse `exterior/roof`, `exterior/trim`, `hull_ceiling` and `hull_lamp`. Upgrade items have their own icons (`textures/item/radar_upgrade`, `radio_upgrade`, and placeholders `engine_overdrive_upgrade`, `antigravity_upgrade`, `inventory_upgrade` drawn on the radar's case).
 
-**Ready for later features:** `furnace_off`/`furnace_on`, `alloy_furnace_off`/`alloy_furnace_on`, `energyio`, `hatch`.
+Modules are full blocks with one texture on every face (only the face into the room shows): `crafting_module` (crafting), `crafting_inventory_access` (crafting & inventory access: the crafting grid beside a chest), `inventory_access` (a chest), `furnace_off` / `furnace_on`, `inventory_io` (Inventory IO), `energyio`, `hatch`, and `door_bottom` / `door_top` for the door module. Module items show their block's face. The wrench and module base have placeholder icons (`textures/item/wrench`, `module_base`); the ship locator uses vanilla's compass art.
+
+**Ready for later features:** `alloy_furnace_off`/`alloy_furnace_on`.
 
 ### Exterior model
 The exterior is a procedural model built in code from each section's size (`client/model/SectionModel`), so all three tiers and future longer sections share one design. Faces are cut on a 1-block grid, so textures keep 16 pixels per block at any size; body plating uses 2 × 2-block panels.
@@ -621,7 +637,7 @@ Spawned on the client, at the exterior model's positions:
    - F. Upgrade panels, radar and cockpit: **done.** Upgrades (then called modules) plug into upgrade panels (1 / 2 / 3 per tier, four bays each) instead of being blocks; the sonar and metal detector became one radar, a compass line on the driver's HUD with a chosen target ore and height arrows, whose tier (up to 3) is how many radar modules are installed; a cockpit per tier with a modelled chair, desk, consoles, screens and glazing (see sections 6 and 8). Gametest: `radarmodulesaddup`.
 3. **Upgrades, modules and wrench.**
    - A. Upgrades: **done** on `feat-upgrades`. The panel modules became upgrades (radar, radio) and three new ones were added: engine overdrive, antigravity engine and inventory upgrade (see section 8). Gametests: `radarupgradesaddup`, `engineoverdrivesstackuptothree`, `antigravityholdstheshipup`, `antigravitywithoutenergyfalls`, `inventoryupgradesaddslots`.
-   - B. Wall modules and wrench (section 9).
+   - B. Modules and wrench: **done** on `feat-modules`. Crafting, furnace, inventory access, Inventory IO, crafting & inventory access, Energy IO, door and hatch modules, the module base, the wrench and the ship locator (see section 9). The alloy furnace module comes with step 5 and the turrets with step 4. Gametests: `modulesgoinandcomeout`, `inventoryiofiltersandlimits`, `energyiokeepsitslimit`, `furnacemodulesmeltsonenergy`, `doormoduleleadsoutside`.
 4. **Tesla turrets.**
 5. **Standard and hardened tiers, materials and alloys.**
 6. **Ore deposits** (the radar is done, see 2b F).

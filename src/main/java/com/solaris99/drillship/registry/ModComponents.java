@@ -2,6 +2,7 @@ package com.solaris99.drillship.registry;
 
 import com.solaris99.drillship.Drillships;
 
+import net.minecraft.core.GlobalPos;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.component.ItemContainerContents;
@@ -15,6 +16,10 @@ public final class ModComponents {
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<ItemContainerContents>> INSTALLED_DRILL = COMPONENTS.registerComponentType(
             "installed_drill",
             builder -> builder.persistent(ItemContainerContents.CODEC).networkSynchronized(ItemContainerContents.STREAM_CODEC));
+
+    // Where a ship locator points: its holder's last ship, as of the last second.
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<GlobalPos>> LOCATOR_TARGET = COMPONENTS.registerComponentType(
+            "locator_target", builder -> builder.persistent(GlobalPos.CODEC).networkSynchronized(GlobalPos.STREAM_CODEC));
 
     private ModComponents() {
     }

@@ -3,6 +3,11 @@ package com.solaris99.drillship.gametest;
 import com.solaris99.drillship.Config;
 import com.solaris99.drillship.Drillships;
 import com.solaris99.drillship.block.UpgradePanelBlock;
+import com.solaris99.drillship.block.entity.EnergyIoBlockEntity;
+import com.solaris99.drillship.block.entity.FurnaceModuleBlockEntity;
+import com.solaris99.drillship.block.entity.InventoryIoBlockEntity;
+import com.solaris99.drillship.block.entity.IoMode;
+import com.solaris99.drillship.block.entity.ItemFilter;
 import com.solaris99.drillship.entity.DrillshipEntity;
 import com.solaris99.drillship.entity.WagonEntity;
 import com.solaris99.drillship.item.DrillshipItem;
@@ -14,7 +19,9 @@ import com.solaris99.drillship.registry.ModKeys;
 import com.solaris99.drillship.ship.InteriorLayout;
 import com.solaris99.drillship.ship.RadarOre;
 import com.solaris99.drillship.ship.ShipManager;
+import com.solaris99.drillship.ship.ShipModules;
 import com.solaris99.drillship.ship.ShipRadar;
+import com.solaris99.drillship.ship.ShipShape;
 import com.solaris99.drillship.ship.ShipState;
 import com.solaris99.drillship.ship.ShipTier;
 import com.solaris99.drillship.ship.ShipTravel;
@@ -35,9 +42,13 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.items.IItemHandlerModifiable;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.energy.IEnergyStorage;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.items.IItemHandlerModifiable;
+import net.neoforged.neoforge.items.ItemHandlerHelper;
 
 /** Run with {@code ./gradlew runGameTestServer}. Each test uses an empty 13x10x28 area; the ship faces +Z. */
 @GameTestHolder(Drillships.MODID)
@@ -338,6 +349,154 @@ public class DrillshipTests {
         helper.succeed();
     }
 
+    // Modules
+
+    @GameTest(template = TEMPLATE)
+    public static void modulesGoInAndComeOut(GameTestHelper helper) {
+        floor(helper);
+        ShipState ship = place(helper, ORIGIN);
+        ServerLevel interior = interior(helper);
+        InteriorLayout.Room room = ship.layout().room(0);
+        BlockPos wall = freeWall(helper, ship);
+        BlockState shell = interior.getBlockState(wall);
+        helper.assertTrue(ShipModules.install(interior, wall, ModItems.FURNACE_MODULE.get()) == null, "A furnace module goes into a wall");
+        helper.assertTrue(interior.getBlockState(wall).is(ModBlocks.FURNACE_MODULE.get()), "The wall block became the module");
+        FurnaceModuleBlockEntity furnace = (FurnaceModuleBlockEntity) interior.getBlockEntity(wall);
+        furnace.items().setStackInSlot(FurnaceModuleBlockEntity.INPUT, new ItemStack(Items.RAW_IRON, 3));
+        BlockPos floor = room.origin().offset(room.sizeX() / 2, 0, room.sizeZ() / 2);
+        helper.assertTrue(ShipModules.install(interior, floor, ModItems.CRAFTING_MODULE.get()) != null, "Wall modules don't go into the floor");
+        helper.assertTrue(ShipModules.install(interior, room.origin().offset(0, 2, 0), ModItems.CRAFTING_MODULE.get()) != null,
+                "Modules don't go into the corner beams");
+        helper.assertTrue(ShipModules.install(interior, floor, ModItems.HATCH_MODULE.get()) == null, "A hatch goes into the floor");
+
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ship.fuelSlot().setStackInSlot(0, ItemStack.EMPTY);
+        ShipTravel.pickUp(player, ship);
+        helper.assertTrue(ShipManager.get(helper.getLevel().getServer()).get(ship.id()) == ship, "A ship with modules can't be picked up");
+        helper.assertTrue(ShipModules.remove(interior, wall, player), "A wrench takes the furnace out");
+        helper.assertTrue(interior.getBlockState(wall) == shell, "The hull is back as it was");
+        helper.assertTrue(player.getInventory().countItem(ModItems.FURNACE_MODULE.get()) == 1 && player.getInventory().countItem(Items.RAW_IRON) == 3,
+                "The player gets the module and what it held");
+        helper.assertTrue(ShipModules.remove(interior, floor, player) && interior.getBlockState(floor).is(ModBlocks.HULL_FLOOR.get()),
+                "The hatch comes out too");
+        helper.assertTrue(!ShipModules.hasModules(interior, room), "No modules are left");
+        remove(helper, ship);
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE)
+    public static void inventoryIoFiltersAndLimits(GameTestHelper helper) {
+        floor(helper);
+        ShipState ship = place(helper, ORIGIN);
+        ServerLevel interior = interior(helper);
+        BlockPos wall = freeWall(helper, ship);
+        ShipModules.install(interior, wall, ModItems.INVENTORY_IO_MODULE.get());
+        InventoryIoBlockEntity module = (InventoryIoBlockEntity) interior.getBlockEntity(wall);
+        IItemHandler access = interior.getCapability(Capabilities.ItemHandler.BLOCK, wall, null);
+        helper.assertTrue(access != null, "The module exposes the ship's inventory");
+        helper.assertTrue(ItemHandlerHelper.insertItem(access, new ItemStack(Items.STONE, 5), false).isEmpty(), "An empty blacklist lets anything in");
+        helper.assertTrue(contains(ship, Items.STONE), "What goes in lands in the ship's inventory");
+        ItemFilter filter = module.filter();
+        filter.setItem(0, new ItemStack(Items.DIRT));
+        filter.setWhitelist(true);
+        helper.assertTrue(ItemHandlerHelper.insertItem(access, new ItemStack(Items.COBBLESTONE), false).getCount() == 1,
+                "A whitelist keeps out what it doesn't list");
+        helper.assertTrue(ItemHandlerHelper.insertItem(access, new ItemStack(Items.DIRT), false).isEmpty(), "A whitelist lets in what it lists");
+        boolean stoneShown = false;
+        for (int slot = 0; slot < access.getSlots(); slot++) {
+            stoneShown |= access.getStackInSlot(slot).is(Items.STONE) || access.extractItem(slot, 64, true).is(Items.STONE);
+        }
+        helper.assertTrue(!stoneShown, "Items the filter holds back can't be seen or taken");
+        filter.setItem(0, ItemStack.EMPTY);
+        filter.setWhitelist(false);
+        helper.runAfterDelay(20, () -> {
+            module.setLimit(10);
+            helper.assertTrue(ItemHandlerHelper.insertItem(access, new ItemStack(Items.GRAVEL, 64), false).getCount() == 54,
+                    "It lets no more than its limit in each second");
+            helper.assertTrue(!ItemHandlerHelper.insertItem(access, new ItemStack(Items.SAND, 1), false).isEmpty(), "The limit holds within the second");
+            module.cycleMode();
+            helper.assertTrue(module.mode() == IoMode.INPUT, "From both, the mode goes to input");
+            boolean extracted = false;
+            for (int slot = 0; slot < access.getSlots(); slot++) {
+                extracted |= !access.extractItem(slot, 1, true).isEmpty();
+            }
+            helper.assertTrue(!extracted, "In input mode nothing comes out");
+            remove(helper, ship);
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = TEMPLATE)
+    public static void energyIoKeepsItsLimit(GameTestHelper helper) {
+        floor(helper);
+        ShipState ship = place(helper, ORIGIN);
+        ServerLevel interior = interior(helper);
+        BlockPos wall = freeWall(helper, ship);
+        ShipModules.install(interior, wall, ModItems.ENERGY_IO_MODULE.get());
+        EnergyIoBlockEntity module = (EnergyIoBlockEntity) interior.getBlockEntity(wall);
+        IEnergyStorage energy = interior.getCapability(Capabilities.EnergyStorage.BLOCK, wall, null);
+        helper.assertTrue(energy != null && energy.canReceive() && !energy.canExtract(), "It starts in input mode");
+        module.setLimit(100);
+        helper.assertTrue(energy.receiveEnergy(1000, false) == 100, "It takes no more than its limit");
+        helper.assertTrue(energy.receiveEnergy(1000, false) == 0, "The limit is per tick");
+        module.cycleMode();
+        helper.assertTrue(energy.receiveEnergy(1000, false) == 0, "In output mode nothing goes in");
+        helper.runAfterDelay(1, () -> {
+            helper.assertTrue(energy.extractEnergy(50, false) == 50, "In output mode FE comes out");
+            module.cycleMode();
+            helper.assertTrue(energy.canReceive() && energy.canExtract() && energy.receiveEnergy(30, false) == 30,
+                    "Both ways, with a limit of its own for each");
+            module.setLimit(0);
+            helper.assertTrue(module.rate() == Integer.MAX_VALUE, "0 means no limit");
+            remove(helper, ship);
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = TEMPLATE, timeoutTicks = 400)
+    public static void furnaceModuleSmeltsOnEnergy(GameTestHelper helper) {
+        floor(helper);
+        ShipState ship = place(helper, ORIGIN);
+        ServerLevel interior = interior(helper);
+        BlockPos wall = freeWall(helper, ship);
+        ShipModules.install(interior, wall, ModItems.FURNACE_MODULE.get());
+        FurnaceModuleBlockEntity furnace = (FurnaceModuleBlockEntity) interior.getBlockEntity(wall);
+        ship.inventory().setStackInSlot(0, new ItemStack(Items.RAW_IRON, 2));
+        furnace.pullFilter().setItem(0, new ItemStack(Items.RAW_IRON));
+        furnace.togglePull();
+        helper.runAfterDelay(240, () -> {
+            helper.assertTrue(furnace.items().getStackInSlot(FurnaceModuleBlockEntity.OUTPUT).is(Items.IRON_INGOT),
+                    "It pulled the raw iron from the ship and smelted it on the ship's energy");
+            helper.assertTrue(ship.energyUse() == FurnaceModuleBlockEntity.ENERGY_PER_TICK,
+                    "The status panel's use should be the furnace's 20 FE/t, but is " + ship.energyUse());
+            furnace.togglePush();
+            helper.runAfterDelay(25, () -> {
+                helper.assertTrue(contains(ship, Items.IRON_INGOT) && furnace.items().getStackInSlot(FurnaceModuleBlockEntity.OUTPUT).isEmpty(),
+                        "It pushes its output into the ship's inventory");
+                remove(helper, ship);
+                helper.succeed();
+            });
+        });
+    }
+
+    @GameTest(template = TEMPLATE)
+    public static void doorModuleLeadsOutside(GameTestHelper helper) {
+        floor(helper);
+        ShipState ship = place(helper, ORIGIN);
+        ServerLevel interior = interior(helper);
+        BlockPos wall = freeWall(helper, ship);
+        helper.assertTrue(ShipModules.install(interior, wall, ModItems.DOOR_MODULE.get()) == null, "A door module goes into two wall blocks");
+        helper.assertTrue(interior.getBlockState(wall.above()).is(ModBlocks.DOOR_MODULE.get()), "Its upper half is above");
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ShipTravel.exitThroughModule(player, ship, wall);
+        Vec3 feet = relative(helper, player.position());
+        double across = Math.abs(feet.x - ORIGIN.x);
+        helper.assertTrue(player.level() == helper.getLevel() && Math.abs(across - (ShipShape.drillhead(ShipTier.BASIC).halfWidth + 0.8)) < 1.0E-3
+                && Math.abs(feet.y - ORIGIN.y) < 1.0E-3, "The player should step out beside the door module, but is at " + feet);
+        remove(helper, ship);
+        helper.succeed();
+    }
+
     // Wagons
 
     private static final Vec3 LONG_ORIGIN = new Vec3(7.5, 1, 16.5);
@@ -531,6 +690,27 @@ public class DrillshipTests {
             }
         }
         return false;
+    }
+
+    private static ServerLevel interior(GameTestHelper helper) {
+        return helper.getLevel().getServer().getLevel(ModKeys.INTERIOR);
+    }
+
+    /** The first free block of the drillhead's min-X (door side) wall, from the floor up, with a free wall block above it. */
+    private static BlockPos freeWall(GameTestHelper helper, ShipState ship) {
+        ServerLevel interior = interior(helper);
+        InteriorLayout.Room room = ship.layout().room(0);
+        for (int y = 1; y < room.sizeY() - 1; y++) {
+            for (int z = 1; z < room.sizeZ() - 1; z++) {
+                BlockPos pos = room.origin().offset(0, y, z);
+                BlockState state = interior.getBlockState(pos);
+                if ((state.is(ModBlocks.HULL.get()) || state.is(ModBlocks.HULL_SKIRT.get()))
+                        && interior.getBlockState(pos.above()).is(ModBlocks.HULL.get())) {
+                    return pos;
+                }
+            }
+        }
+        throw new GameTestAssertException("No free wall block in the drillhead");
     }
 
     private static void assertBlock(GameTestHelper helper, ServerLevel level, BlockPos pos, Block block) {

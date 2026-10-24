@@ -42,6 +42,14 @@ public final class Config {
             .comment("Damage dealt to entities squashed between a moving ship and a solid block.")
             .defineInRange("squashDamage", 100.0, 0.0, 10000.0);
 
+    public static final ModConfigSpec.IntValue ENERGY_IO_MAX_RATE = BUILDER
+            .comment("The most FE per tick an Energy IO module moves each way, whatever its own limit. 0 means no cap.")
+            .defineInRange("energyIoMaxRate", 0, 0, Integer.MAX_VALUE);
+
+    public static final ModConfigSpec.IntValue INVENTORY_IO_MAX_RATE = BUILDER
+            .comment("The most items per second an Inventory IO module lets through each way, whatever its own limit. 0 means no cap.")
+            .defineInRange("inventoryIoMaxRate", 0, 0, Integer.MAX_VALUE);
+
     static final ModConfigSpec SPEC = BUILDER.build();
 
     private Config() {

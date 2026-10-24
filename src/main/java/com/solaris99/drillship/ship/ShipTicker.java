@@ -46,6 +46,7 @@ public final class ShipTicker {
             ensureEntity(server, ship);
             ChunkLoading.update(server, ship);
             updateIndicators(server, ship, gameTime);
+            ship.recordEnergyUse();
         }
         processReturns(server, manager);
     }

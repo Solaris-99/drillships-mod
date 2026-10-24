@@ -2,7 +2,10 @@ package com.solaris99.drillship.registry;
 
 import com.solaris99.drillship.Drillships;
 import com.solaris99.drillship.block.CockpitBlock;
+import com.solaris99.drillship.block.FurnaceModuleBlock;
 import com.solaris99.drillship.block.HullPanelBlock;
+import com.solaris99.drillship.block.ModuleBlock;
+import com.solaris99.drillship.block.ModuleDoorBlock;
 import com.solaris99.drillship.block.ShipDoorBlock;
 import com.solaris99.drillship.block.ShipInteriorBlock;
 import com.solaris99.drillship.block.UpgradePanelBlock;
@@ -53,6 +56,18 @@ public final class ModBlocks {
         BLOCKS.addAlias(Drillships.id("module_panel"), Drillships.id("upgrade_panel"));
     }
 
+    // Modules, installed in the hull in place of shell blocks (see ShipModules).
+    public static final DeferredBlock<ModuleBlock> CRAFTING_MODULE = module("crafting_module", ModuleBlock.Kind.CRAFTING);
+    public static final DeferredBlock<ModuleBlock> CRAFTING_INVENTORY_ACCESS_MODULE = module("crafting_inventory_access_module",
+            ModuleBlock.Kind.CRAFTING_INVENTORY_ACCESS);
+    public static final DeferredBlock<ModuleBlock> INVENTORY_ACCESS_MODULE = module("inventory_access_module", ModuleBlock.Kind.INVENTORY_ACCESS);
+    public static final DeferredBlock<ModuleBlock> INVENTORY_IO_MODULE = module("inventory_io_module", ModuleBlock.Kind.INVENTORY_IO);
+    public static final DeferredBlock<FurnaceModuleBlock> FURNACE_MODULE = BLOCKS.register("furnace_module",
+            () -> new FurnaceModuleBlock(interior().lightLevel(state -> state.getValue(FurnaceModuleBlock.LIT) ? 13 : 0)));
+    public static final DeferredBlock<ModuleBlock> ENERGY_IO_MODULE = module("energy_io_module", ModuleBlock.Kind.ENERGY_IO);
+    public static final DeferredBlock<ModuleDoorBlock> DOOR_MODULE = BLOCKS.register("door_module", () -> new ModuleDoorBlock(interior()));
+    public static final DeferredBlock<ModuleBlock> HATCH_MODULE = module("hatch_module", ModuleBlock.Kind.HATCH);
+
     // The cockpit (see InteriorLayout.cockpit): the driver's chair, the desk across the front, the consoles beside the
     // chair, screens on the front wall, and the glazed bulkhead that sets it apart from the rest of the cabin.
     public static final DeferredBlock<CockpitBlock> COCKPIT_CHAIR = BLOCKS.register("cockpit_chair",
@@ -85,6 +100,10 @@ public final class ModBlocks {
 
     private static boolean never(BlockState state, BlockGetter level, BlockPos pos) {
         return false;
+    }
+
+    private static DeferredBlock<ModuleBlock> module(String name, ModuleBlock.Kind kind) {
+        return BLOCKS.register(name, () -> new ModuleBlock(kind, interior()));
     }
 
     private static DeferredBlock<ShipInteriorBlock> builtIn(String name, ShipInteriorBlock.Function function, BlockBehaviour.Properties properties) {
