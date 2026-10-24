@@ -345,6 +345,7 @@ public class ShipState {
 
     public void setWagonCount(int wagonCount) {
         this.wagonCount = wagonCount;
+        extendPath();
         trimPath();
         manager.setDirty();
     }
@@ -431,9 +432,41 @@ public class ShipState {
         }
     }
 
+    // Enough path for the last wagon to ride on.
+    private double neededPath() {
+        return -ShipShape.drillhead(tier).back + wagonCount * (tier.wagonExteriorLength() + tier.coupling().gap()) + 1.0;
+    }
+
+    /**
+     * Lays the path out straight back past its oldest point, as far as the last wagon needs. Without it a wagon coupled
+     * to a ship that hasn't driven yet would have no path to ride on and would be put straight behind wherever the
+     * drillhead turns, so turning in place could swing it around.
+     */
+    private void extendPath() {
+        Vec3 center = center(position, yaw, pitch);
+        if (path.isEmpty()) {
+            path.add(center);
+        }
+        double length = 0;
+        Vec3 previous = center;
+        for (int i = path.size() - 1; i >= 0; i--) {
+            length += previous.distanceTo(path.get(i));
+            previous = path.get(i);
+        }
+        Vec3 direction = path.size() >= 2 ? path.get(0).subtract(path.get(1)) : Vec3.ZERO;
+        direction = direction.lengthSqr() > 1.0E-6 ? direction.normalize() : ShipShape.Frame.of(Vec3.ZERO, yaw, pitch).forward().reverse();
+        List<Vec3> added = new ArrayList<>();
+        Vec3 tail = path.get(0);
+        for (; length < neededPath(); length += PATH_SPACING) {
+            tail = tail.add(direction.scale(PATH_SPACING));
+            added.add(0, tail);
+        }
+        path.addAll(0, added);
+    }
+
     // Keep just enough path for the last wagon.
     private void trimPath() {
-        double needed = -ShipShape.drillhead(tier).back + wagonCount * (tier.wagonExteriorLength() + tier.coupling().gap()) + 1.0;
+        double needed = neededPath();
         double length = 0;
         Vec3 previous = center(position, yaw, pitch);
         for (int i = path.size() - 1; i >= 0; i--) {
@@ -715,6 +748,9 @@ public class ShipState {
         for (Tag entry : tag.getList("Path", Tag.TAG_COMPOUND)) {
             CompoundTag point = (CompoundTag) entry;
             ship.path.add(new Vec3(point.getDouble("X"), point.getDouble("Y"), point.getDouble("Z")));
+        }
+        if (ship.wagonCount > 0) {
+            ship.extendPath();
         }
         ship.headlight = NbtUtils.readBlockPos(tag, "Headlight").orElse(null);
         ship.inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
