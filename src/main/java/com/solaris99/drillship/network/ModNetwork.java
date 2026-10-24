@@ -117,14 +117,11 @@ public final class ModNetwork {
         }
     }
 
-    /** The driver's steering keys, sent whenever they change. */
-    public record DriveInput(float forward, float left, boolean up, boolean down) implements CustomPacketPayload {
+    /** The driver's throttle, sent whenever it changes. Steering follows the driver's look, which the server knows. */
+    public record DriveInput(float forward) implements CustomPacketPayload {
         public static final Type<DriveInput> TYPE = new Type<>(Drillships.id("drive_input"));
         public static final StreamCodec<ByteBuf, DriveInput> CODEC = StreamCodec.composite(
                 ByteBufCodecs.FLOAT, DriveInput::forward,
-                ByteBufCodecs.FLOAT, DriveInput::left,
-                ByteBufCodecs.BOOL, DriveInput::up,
-                ByteBufCodecs.BOOL, DriveInput::down,
                 DriveInput::new);
 
         @Override
@@ -195,7 +192,7 @@ public final class ModNetwork {
 
     private static void handleDriveInput(DriveInput input, IPayloadContext context) {
         if (context.player().getVehicle() instanceof DrillshipEntity ship) {
-            ship.setInput(input.forward(), input.left(), input.up(), input.down());
+            ship.setInput(input.forward());
         }
     }
 

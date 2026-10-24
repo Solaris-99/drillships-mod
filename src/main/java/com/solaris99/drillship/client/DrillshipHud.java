@@ -3,8 +3,12 @@ package com.solaris99.drillship.client;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
+
 import com.solaris99.drillship.entity.DrillshipEntity;
 import com.solaris99.drillship.network.ModNetwork;
+import com.solaris99.drillship.ship.ShipShape;
 import com.solaris99.drillship.ship.ShipState;
 
 import net.minecraft.client.DeltaTracker;
@@ -13,10 +17,11 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * The driver's HUD, styled like an old military terminal: green monospace text on dark panels with scanlines. Shows the
- * ship's attitude, drill, power and warnings, and the radar (RadarHud) when the ship has radar upgrades. Readouts come from {@link ModNetwork.ShipStatus}; attitude comes straight
+ * ship's attitude, drill, power and warnings, the steering marker, and the radar (RadarHud) when the ship has radar upgrades. Readouts come from {@link ModNetwork.ShipStatus}; attitude comes straight
  * from the interpolated entity so it moves smoothly.
  */
 public final class DrillshipHud {
@@ -32,6 +37,11 @@ public final class DrillshipHud {
     private static final int ATTITUDE_SIZE = 84;
     private static final float PIXELS_PER_DEGREE = 1.5F;
     private static final int LADDER_STEP = 10;
+
+    private static final float STEER_RADIUS = 5.0F;
+    // The line stops this far short of the crosshair, and the marker this far inside the screen's edges.
+    private static final float STEER_GAP = 5.0F;
+    private static final float STEER_EDGE = 12.0F;
 
     private static final int[] WARNING_FLAGS = {
             ShipState.WARN_INVENTORY_FULL, ShipState.WARN_NO_ENERGY, ShipState.WARN_LOW_ENERGY, ShipState.WARN_NO_DRILL,
@@ -58,6 +68,7 @@ public final class DrillshipHud {
         }
         int attitudeLeft = graphics.guiWidth() - MARGIN - ATTITUDE_SIZE;
         renderAttitude(graphics, font, ship, partialTick, attitudeLeft, MARGIN);
+        renderSteering(graphics, minecraft, ship, partialTick);
         // The radar line goes between the readouts and the attitude indicator, or under the latter when that is too narrow.
         RadarHud.render(graphics, font, ship, partialTick, readouts[0] + MARGIN, attitudeLeft - MARGIN, MARGIN,
                 graphics.guiWidth() - MARGIN, MARGIN + ATTITUDE_SIZE + 2 + LINE_HEIGHT + PADDING + 4);
@@ -149,6 +160,40 @@ public final class DrillshipHud {
         int readoutLeft = left + size - width;
         panel(graphics, readoutLeft, top + size + 2, width, LINE_HEIGHT + PADDING);
         graphics.drawString(font, readout, readoutLeft + PADDING, top + size + 2 + PADDING / 2 + 1, GREEN, false);
+    }
+
+    // A circle where the ship's nose points, with a line to the crosshair, where the driver looks: the ship is turning
+    // along that line (see DrillshipEntity.rotate). Once it faces the look, the circle sits on the crosshair.
+    private static void renderSteering(GuiGraphics graphics, Minecraft minecraft, DrillshipEntity ship, float partialTick) {
+        Vec3 nose = ShipShape.Frame.of(Vec3.ZERO, Mth.rotLerp(partialTick, ship.yRotO, ship.getYRot()),
+                Mth.lerp(partialTick, ship.xRotO, ship.getXRot())).forward();
+        // In the camera's coordinates: x right, y up, looking down -z.
+        Vector3f view = minecraft.gameRenderer.getMainCamera().rotation().conjugate(new Quaternionf())
+                .transform(new Vector3f((float) nose.x, (float) nose.y, (float) nose.z));
+        if (view.z > -1.0E-3F) {
+            return;
+        }
+        float halfWidth = graphics.guiWidth() / 2.0F, halfHeight = graphics.guiHeight() / 2.0F;
+        float pixelsPerUnit = halfHeight / (float) Math.tan(Math.toRadians(ClientEvents.fov()) / 2);
+        float x = view.x / -view.z * pixelsPerUnit;
+        float y = -view.y / -view.z * pixelsPerUnit;
+        // A nose outside the view is shown at the edge, in its direction.
+        float fit = Math.min(1.0F, Math.min((halfWidth - STEER_EDGE) / Math.abs(x), (halfHeight - STEER_EDGE) / Math.abs(y)));
+        x *= fit;
+        y *= fit;
+        for (int i = 0; i < 32; i++) {
+            double angle = 2 * Math.PI * i / 32;
+            dot(graphics, halfWidth + x + STEER_RADIUS * (float) Math.cos(angle), halfHeight + y + STEER_RADIUS * (float) Math.sin(angle));
+        }
+        float distance = Mth.sqrt(x * x + y * y);
+        for (float d = STEER_GAP; d <= distance - STEER_RADIUS; d += 1.0F) {
+            dot(graphics, halfWidth + x * d / distance, halfHeight + y * d / distance);
+        }
+    }
+
+    private static void dot(GuiGraphics graphics, float x, float y) {
+        int px = Math.round(x), py = Math.round(y);
+        graphics.fill(px, py, px + 1, py + 1, GREEN);
     }
 
     static void panel(GuiGraphics graphics, int x, int y, int width, int height) {

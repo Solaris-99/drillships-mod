@@ -112,6 +112,24 @@ public class DrillshipTests {
         });
     }
 
+    @GameTest(template = TEMPLATE, timeoutTicks = 100)
+    public static void steersTowardTheLook(GameTestHelper helper) {
+        floor(helper);
+        ShipState ship = place(helper, ORIGIN);
+        ServerPlayer driver = drive(helper, ship);
+        DrillshipEntity entity = entity(helper, ship);
+        entity.setInput(0.0F);
+        driver.setYRot(-120.0F);
+        helper.runAfterDelay(50, () -> {
+            // The look was clamped to 60 degrees off the heading, after the ship's first 2.7-degree turn toward it.
+            helper.assertTrue(Math.abs(Mth.wrapDegrees(driver.getYRot() + 62.7F)) < 1.0E-3, "The driver can't look more than 60 degrees off the heading, but looks at " + driver.getYRot());
+            helper.assertTrue(Math.abs(Mth.wrapDegrees(entity.getYRot() - driver.getYRot())) < 1.0E-3, "The ship should turn to face the look, but is at " + entity.getYRot());
+            helper.assertTrue(Math.abs(entity.getXRot()) < 1.0E-3, "A level look on flat ground keeps the ship level");
+            remove(helper, ship);
+            helper.succeed();
+        });
+    }
+
     @GameTest(template = TEMPLATE, timeoutTicks = 200)
     public static void wrongTierMinesWithoutDrops(GameTestHelper helper) {
         floor(helper);
@@ -354,9 +372,10 @@ public class DrillshipTests {
         floor(helper, 15, 48);
         ShipState ship = place(helper, LONG_ORIGIN);
         attach(helper, ship);
-        drive(helper, ship);
+        ServerPlayer driver = drive(helper, ship);
         DrillshipEntity drillhead = entity(helper, ship);
-        drillhead.setInput(0.0F, 1.0F, false, false);
+        drillhead.setInput(0.0F);
+        driver.setYRot(-90.0F);
         helper.runAfterDelay(60, () -> {
             WagonEntity wagon = ShipWagons.findEntity(helper.getLevel().getServer(), ship, 1);
             helper.assertTrue(wagon != null, "The wagon's exterior should exist");
@@ -412,7 +431,7 @@ public class DrillshipTests {
         floor(helper);
         ShipState ship = place(helper, ORIGIN);
         ServerPlayer driver = drive(helper, ship);
-        entity(helper, ship).setInput(0, 0, false, false);
+        entity(helper, ship).setInput(0.0F);
         helper.runAfterDelay(5, () -> {
             BlockPos light = ship.headlight();
             helper.assertTrue(light != null && helper.getLevel().getBlockState(light).is(Blocks.LIGHT), "The headlight should be on while driving");
@@ -489,7 +508,7 @@ public class DrillshipTests {
         DrillshipEntity entity = entity(helper, ship);
         driver.teleportTo(entity.getX(), entity.getY(), entity.getZ());
         driver.startRiding(entity, true);
-        entity.setInput(1.0F, 0.0F, false, false);
+        entity.setInput(1.0F);
         return driver;
     }
 

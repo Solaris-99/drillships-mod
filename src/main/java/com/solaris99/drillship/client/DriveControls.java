@@ -21,13 +21,13 @@ import net.neoforged.neoforge.network.PacketDistributor;
 /**
  * The drillship's controls: key mappings of their own (keys or mouse buttons), live only while driving, so they can
  * share keys with anything vanilla does on foot. While driving, the vanilla actions on those keys are held back: a
- * click bound to the drill doesn't also attack, and Shift bound to pitching down doesn't also leave the helm. Set in the
- * controls panel (DriveControlsScreen) or in vanilla's key binds.
+ * click bound to the drill doesn't also attack. Steering isn't a key: the ship turns toward where the driver looks. Set in
+ * the controls panel (DriveControlsScreen) or in vanilla's key binds.
  */
 public final class DriveControls {
     // Only active while driving, so these may share keys with vanilla's. It counts as in-game: NeoForge treats a key
     // with no modifier as up while Shift, Ctrl or Alt is held unless its context conflicts with IN_GAME, which would
-    // make the defaults on Shift (leave) and Ctrl (pitch down) never register.
+    // make the default on Shift (leave) never register.
     static final IKeyConflictContext DRIVING = new IKeyConflictContext() {
         @Override
         public boolean isActive() {
@@ -42,16 +42,12 @@ public final class DriveControls {
 
     public static final KeyMapping FORWARD = key("drive_forward", GLFW.GLFW_KEY_W);
     public static final KeyMapping BACK = key("drive_back", GLFW.GLFW_KEY_S);
-    public static final KeyMapping LEFT = key("steer_left", GLFW.GLFW_KEY_A);
-    public static final KeyMapping RIGHT = key("steer_right", GLFW.GLFW_KEY_D);
-    public static final KeyMapping PITCH_UP = key("pitch_up", GLFW.GLFW_KEY_SPACE);
-    public static final KeyMapping PITCH_DOWN = key("pitch_down", GLFW.GLFW_KEY_LEFT_CONTROL);
     public static final KeyMapping TOGGLE_DRILL = key("toggle_drill", GLFW.GLFW_KEY_F);
     public static final KeyMapping RADAR_TARGET = key("radar_target", GLFW.GLFW_KEY_R);
     public static final KeyMapping LEAVE = key("leave_helm", GLFW.GLFW_KEY_LEFT_SHIFT);
 
     /** In the order the panel lists them. */
-    public static final List<KeyMapping> ALL = List.of(FORWARD, BACK, LEFT, RIGHT, PITCH_UP, PITCH_DOWN, TOGGLE_DRILL, RADAR_TARGET, LEAVE);
+    public static final List<KeyMapping> ALL = List.of(FORWARD, BACK, TOGGLE_DRILL, RADAR_TARGET, LEAVE);
 
     // Resend input at least this often, in case a packet was missed.
     private static final int RESEND_TICKS = 20;
@@ -94,7 +90,7 @@ public final class DriveControls {
         while (RADAR_TARGET.consumeClick()) {
             PacketDistributor.sendToServer(new ModNetwork.CycleRadarTarget(1));
         }
-        ModNetwork.DriveInput current = new ModNetwork.DriveInput(axis(FORWARD, BACK), axis(LEFT, RIGHT), PITCH_UP.isDown(), PITCH_DOWN.isDown());
+        ModNetwork.DriveInput current = new ModNetwork.DriveInput(axis(FORWARD, BACK));
         ticksSinceSent++;
         if (!current.equals(lastInput) || ticksSinceSent >= RESEND_TICKS) {
             PacketDistributor.sendToServer(current);
