@@ -25,7 +25,9 @@ public class ModuleItem extends Item {
         /** Two wall blocks, one above the other. */
         DOOR,
         /** A floor or ceiling block. */
-        HATCH
+        HATCH,
+        /** A ceiling block; one per section (the tesla turrets). */
+        CEILING
     }
 
     private final Supplier<? extends ModuleBlock> block;
@@ -64,7 +66,11 @@ public class ModuleItem extends Item {
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("tooltip.drillships." + BuiltInRegistries.ITEM.getKey(this).getPath()).withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.translatable(placement == Placement.HATCH ? "tooltip.drillships.module_hatch" : "tooltip.drillships.module")
-                .withStyle(ChatFormatting.DARK_GRAY));
+        String how = switch (placement) {
+            case HATCH -> "tooltip.drillships.module_hatch";
+            case CEILING -> "tooltip.drillships.module_ceiling";
+            default -> "tooltip.drillships.module";
+        };
+        tooltip.add(Component.translatable(how).withStyle(ChatFormatting.DARK_GRAY));
     }
 }

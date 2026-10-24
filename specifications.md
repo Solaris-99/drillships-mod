@@ -183,9 +183,10 @@ The cockpit blocks are built in, like the hull; they don't stop the ship from be
   - drill on/off
   - automatic fuel on/off
   - wagons: a wagon slot (a wagon placed in it is attached right away) and a button to detach the last wagon
-  - tesla turrets on/off
+  - tesla turrets on/off, and what they target (one setting for all of them)
   - picking the ship up
 - **Warnings:** no energy, low energy (< 10%), inventory full, no drill, drill broken, drill worn, path blocked.
+- **Layout** (324 × 222, so it fits at the default GUI scale on a 1080p screen): readouts in the left column; in the right column the drill, fuel and wagon slots side by side, with the six buttons two to a row under them (drill, automatic fuel, detach wagon, pick up, turrets on/off, turret targets); warnings across the panel, two to a row; the player's inventory centred below; the Controls button in the title bar.
 
 ### Generator
 - **Location:** only the drillhead has one.
@@ -275,7 +276,7 @@ Modules are fixtures installed into the hull from the inside, in place of shell 
 | Energy IO | Its side exposes the energy buffer. It never pushes on its own. Mode: input (the default; other blocks can push FE in), output (they can pull it out) or both. A rate limit in FE/t, each way, set with -1000 / -100 / -10 / +10 / +100 / +1000 and "No limit" (0, the default), and capped by `energyIoMaxRate` *(config, default 0 = no cap)*. A plain right-click with a wrench also steps the mode. |
 | Door | An extra exit, two blocks tall. Can't be locked. |
 | Hatch | An exit through the roof or the floor. Can't be locked. |
-| Tesla turret (small / medium) | See below. *(Roadmap step 4.)* |
+| Tesla turret (small / medium) | See below. |
 
 **Door and hatch exits.** Using one leaves the ship at that spot: out of the hull beside a door module (facing away from the wall), onto the roof above a ceiling hatch, or under the ship below a floor hatch. Blocks in the way are cut as at the section's door (section 3). Where that isn't allowed, or a door module in an end wall opens onto the next section, the player leaves through the section's own door. Entering is still through the section's door.
 
@@ -284,12 +285,14 @@ Modules are fixtures installed into the hull from the inside, in place of shell 
 The modules that keep settings or items (furnace, Inventory IO, Energy IO) are blocks with their own data in the interior's chunks, which stay loaded with the ship.
 
 ### Tesla turrets
-- **Placement:** roof only, in the middle of a wagon or the drillhead. Each section can have at most one turret.
-- **Damage:** small 4, medium 6, every 0.25 s. It ignores armor completely.
-- **Area:** a box around its own section, enlarged by 3 blocks (small) or 7 blocks (medium). Line of sight isn't required.
-- **Targets:** hostile mobs only by default *(in-game setting)*.
-- **Energy:** costs 100 FE per hit and doesn't fire without enough energy. No cost while idle.
-- **Status panel:** turrets are listed and can be switched on or off there.
+- **Placement:** a module for the ceiling: right-click any free ceiling block of a room (away from the walls) with it. The block becomes the turret's mount inside, and outside the turret always sits in the middle of that section's roof. Each section can have at most one turret ("This section already has a tesla turret"). It comes out with a wrench like any module, and using the mount opens the status panel.
+- **Outside:** a hatch flush with the roof, out of which a tesla coil (a column with a crown of rings and a ball on top) rises when the two blocks above the roof's middle are clear, and folds back where they aren't, as in a tunnel, so it stays inside the tunnel's cross-section. The medium turret is 1.3 × bigger. It fires either way, from where the coil's top would be.
+- **Damage:** small 4, medium 6, every 0.25 s, to every target in its area at once. It ignores armor completely and invulnerability frames (damage type `drillships:tesla`, tagged `bypasses_armor` and `bypasses_cooldown`).
+- **Area:** a box around its own section, enlarged by 3 blocks (small) or 7 blocks (medium). Line of sight isn't required. Never the ship's own riders, or players in creative.
+- **Targets** *(in-game setting, one for all the ship's turrets)*: hostiles (the default), all mobs (but not pets, villagers or iron golems; never players), or everything (mobs and players).
+- **Energy:** costs 100 FE per hit and stops firing when the buffer can't pay. No cost while idle.
+- **Effect:** a jagged line of electric sparks from the coil to each target, and a short crack of thunder.
+- **Status panel:** one "Turrets: ON/OFF" toggle and one target setting for every turret of the ship.
 
 ---
 
@@ -553,7 +556,7 @@ Textures and sounds are supplied by the author. Missing assets use vanilla place
 
 The chair, desk and consoles are block models with elements (the desk and console tops tilted 22.5°); the pod's roof and lamp reuse `exterior/roof`, `exterior/trim`, `hull_ceiling` and `hull_lamp`. Upgrade items have their own icons (`textures/item/radar_upgrade`, `radio_upgrade`, and placeholders `engine_overdrive_upgrade`, `antigravity_upgrade`, `inventory_upgrade` drawn on the radar's case).
 
-Modules are full blocks with one texture on every face (only the face into the room shows): `crafting_module` (crafting), `crafting_inventory_access` (crafting & inventory access: the crafting grid beside a chest), `inventory_access` (a chest), `furnace_off` / `furnace_on`, `inventory_io` (Inventory IO), `energyio`, `hatch`, and `door_bottom` / `door_top` for the door module. Module items show their block's face. The wrench and module base have placeholder icons (`textures/item/wrench`, `module_base`); the ship locator uses vanilla's compass art.
+Modules are full blocks with one texture on every face (only the face into the room shows): `crafting_module` (crafting), `crafting_inventory_access` (crafting & inventory access: the crafting grid beside a chest), `inventory_access` (a chest), `furnace_off` / `furnace_on`, `inventory_io` (Inventory IO), `energyio`, `hatch`, `small_tesla_turret` / `medium_tesla_turret` (the turret mounts: one or two amber bolts in a ring; placeholders), and `door_bottom` / `door_top` for the door module. Module items show their block's face. The wrench and module base have placeholder icons (`textures/item/wrench`, `module_base`); the ship locator uses vanilla's compass art.
 
 **Ready for later features:** `alloy_furnace_off`/`alloy_furnace_on`.
 
@@ -638,7 +641,7 @@ Spawned on the client, at the exterior model's positions:
 3. **Upgrades, modules and wrench.**
    - A. Upgrades: **done** on `feat-upgrades`. The panel modules became upgrades (radar, radio) and three new ones were added: engine overdrive, antigravity engine and inventory upgrade (see section 8). Gametests: `radarupgradesaddup`, `engineoverdrivesstackuptothree`, `antigravityholdstheshipup`, `antigravitywithoutenergyfalls`, `inventoryupgradesaddslots`.
    - B. Modules and wrench: **done** on `feat-modules`. Crafting, furnace, inventory access, Inventory IO, crafting & inventory access, Energy IO, door and hatch modules, the module base, the wrench and the ship locator (see section 9). The alloy furnace module comes with step 5 and the turrets with step 4. Gametests: `modulesgoinandcomeout`, `inventoryiofiltersandlimits`, `energyiokeepsitslimit`, `furnacemodulesmeltsonenergy`, `doormoduleleadsoutside`.
-4. **Tesla turrets.**
+4. **Tesla turrets: done** on `feat-tesla-turrets` (see section 9, Tesla turrets). The exterior coil reuses `exterior/hatch`, `trim`, `pipe` and `drill_steel`. Gametests: `teslaturretzapshostilesthrougharmor`, `teslaturretsettings`.
 5. **Standard and hardened tiers, materials and alloys.**
 6. **Ore deposits** (the radar is done, see 2b F).
 7. **Filters and barrels.**

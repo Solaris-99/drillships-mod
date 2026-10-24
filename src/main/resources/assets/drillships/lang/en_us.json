@@ -217,5 +217,20 @@
   "gui.drillships.item_limit": "Limit: %s items/s",
   "gui.drillships.energy_use": "Using: %s FE/t",
   "message.drillships.io_mode": "%s: %s",
-  "drillships.configuration.inventoryIoMaxRate": "Inventory IO Max Rate (items/s)"
+  "drillships.configuration.inventoryIoMaxRate": "Inventory IO Max Rate (items/s)",
+  "item.drillships.small_tesla_turret": "Small Tesla Turret",
+  "item.drillships.medium_tesla_turret": "Medium Tesla Turret",
+  "block.drillships.small_tesla_turret": "Small Tesla Turret",
+  "block.drillships.medium_tesla_turret": "Medium Tesla Turret",
+  "tooltip.drillships.small_tesla_turret": "Zaps everything it targets within 3 blocks of its section for 4 damage every 0.25 s, through armor. 100 FE per hit.",
+  "tooltip.drillships.medium_tesla_turret": "Zaps everything it targets within 7 blocks of its section for 6 damage every 0.25 s, through armor. 100 FE per hit.",
+  "tooltip.drillships.module_ceiling": "Right-click a free ceiling block inside a ship to install it; one per section, it rises from the middle of the roof. Shift + right-click it with a wrench to take it out.",
+  "message.drillships.one_turret": "This section already has a tesla turret",
+  "gui.drillships.turrets_on": "Turrets: ON",
+  "gui.drillships.turrets_off": "Turrets: OFF",
+  "gui.drillships.turret_targets.hostiles": "Hostiles",
+  "gui.drillships.turret_targets.mobs": "All mobs",
+  "gui.drillships.turret_targets.everything": "Everything",
+  "death.attack.drillships.tesla": "%1$s was zapped by a %2$s's tesla turret",
+  "gui.drillships.turret_targets": "What the tesla turrets shoot at"
 }

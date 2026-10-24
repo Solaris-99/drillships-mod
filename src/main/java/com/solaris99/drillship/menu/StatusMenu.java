@@ -32,6 +32,8 @@ public class StatusMenu extends AbstractContainerMenu {
     public static final int BUTTON_TOGGLE_AUTO_FUEL = 1;
     public static final int BUTTON_PICK_UP = 2;
     public static final int BUTTON_DETACH_WAGON = 3;
+    public static final int BUTTON_TOGGLE_TURRETS = 4;
+    public static final int BUTTON_CYCLE_TURRET_TARGETS = 5;
 
     public static final int ENERGY = 0;
     public static final int CAPACITY = 1;
@@ -50,18 +52,25 @@ public class StatusMenu extends AbstractContainerMenu {
     public static final int WAGONS = 14;
     public static final int MAX_WAGONS = 15;
     public static final int ENERGY_USE = 16;
-    private static final int DATA_COUNT = 17;
+    public static final int TURRET_TARGETS = 17;
+    private static final int DATA_COUNT = 18;
 
     public static final int FLAG_DRILL_ON = 1;
     public static final int FLAG_AUTO_FUEL = 1 << 1;
+    public static final int FLAG_TURRETS_ON = 1 << 2;
 
-    public static final int DRILL_SLOT_X = 152;
-    public static final int DRILL_SLOT_Y = 18;
-    public static final int FUEL_SLOT_X = 152;
-    public static final int FUEL_SLOT_Y = 52;
-    public static final int WAGON_SLOT_X = 152;
-    public static final int WAGON_SLOT_Y = 86;
-    public static final int INVENTORY_Y = 180;
+    // Two columns: readouts on the left; on the right the drill, fuel and wagon slots side by side, with the buttons
+    // under them; warnings across the panel; the player's inventory centred below.
+    public static final int WIDTH = 324;
+    public static final int RIGHT_COLUMN_X = 152;
+    public static final int SLOTS_Y = 28;
+    public static final int DRILL_SLOT_X = 171;
+    public static final int FUEL_SLOT_X = 225;
+    public static final int WAGON_SLOT_X = 279;
+    public static final int BUTTONS_Y = 50;
+    public static final int WARNINGS_Y = 104;
+    public static final int INVENTORY_X = (WIDTH - 9 * ShipMenus.SLOT_SIZE) / 2;
+    public static final int INVENTORY_Y = 140;
 
     private static final int SHIP_SLOTS = 3;
 
@@ -99,15 +108,15 @@ public class StatusMenu extends AbstractContainerMenu {
             }
         };
 
-        addSlot(new SlotItemHandler(drill, 0, DRILL_SLOT_X, DRILL_SLOT_Y));
-        addSlot(new SlotItemHandler(fuel, 0, FUEL_SLOT_X, FUEL_SLOT_Y));
-        addSlot(new Slot(wagonInput, 0, WAGON_SLOT_X, WAGON_SLOT_Y) {
+        addSlot(new SlotItemHandler(drill, 0, DRILL_SLOT_X, SLOTS_Y));
+        addSlot(new SlotItemHandler(fuel, 0, FUEL_SLOT_X, SLOTS_Y));
+        addSlot(new Slot(wagonInput, 0, WAGON_SLOT_X, SLOTS_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return stack.getItem() instanceof WagonItem;
             }
         });
-        ShipMenus.addPlayerInventory(this::addSlot, inventory, INVENTORY_Y);
+        ShipMenus.addPlayerInventory(this::addSlot, inventory, INVENTORY_X, INVENTORY_Y);
         addDataSlots(data);
     }
 
@@ -127,10 +136,12 @@ public class StatusMenu extends AbstractContainerMenu {
             case Y -> Mth.floor(ship.position().y);
             case Z -> Mth.floor(ship.position().z);
             case WARNINGS -> ship.warnings(player.level().getGameTime());
-            case FLAGS -> (ship.isDrillOn() ? FLAG_DRILL_ON : 0) | (ship.isAutoFuel() ? FLAG_AUTO_FUEL : 0);
+            case FLAGS -> (ship.isDrillOn() ? FLAG_DRILL_ON : 0) | (ship.isAutoFuel() ? FLAG_AUTO_FUEL : 0)
+                    | (ship.areTurretsOn() ? FLAG_TURRETS_ON : 0);
             case WAGONS -> ship.wagonCount();
             case MAX_WAGONS -> ship.tier().maxWagons();
             case ENERGY_USE -> ship.energyUse();
+            case TURRET_TARGETS -> ship.turretTargets().ordinal();
             default -> 0;
         };
     }
@@ -151,6 +162,8 @@ public class StatusMenu extends AbstractContainerMenu {
         switch (id) {
             case BUTTON_TOGGLE_DRILL -> ship.setDrillOn(!ship.isDrillOn());
             case BUTTON_TOGGLE_AUTO_FUEL -> ship.setAutoFuel(!ship.isAutoFuel());
+            case BUTTON_TOGGLE_TURRETS -> ship.setTurretsOn(!ship.areTurretsOn());
+            case BUTTON_CYCLE_TURRET_TARGETS -> ship.setTurretTargets(ship.turretTargets().next());
             case BUTTON_PICK_UP -> ShipTravel.pickUp(serverPlayer, ship);
             case BUTTON_DETACH_WAGON -> {
                 Component error = ShipWagons.detachLast(serverPlayer, ship);

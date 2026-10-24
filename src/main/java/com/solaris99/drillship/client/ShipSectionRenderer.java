@@ -72,7 +72,8 @@ public class ShipSectionRenderer<T extends ShipSectionEntity> extends EntityRend
         boolean lights = ship instanceof DrillshipEntity drillhead && drillhead.isEngineOn();
         boolean beacon = ship instanceof DrillshipEntity drillhead && drillhead.isWarning() && (ship.tickCount / BEACON_BLINK_TICKS) % 2 == 0;
         int upgrades = ship instanceof DrillshipEntity drillhead ? drillhead.upgrades() : 0;
-        emit(consumer, pose, SectionModel.buildMoving(spec, ship.getTravel(partialTick), ship.getDoorOpen(partialTick), lights, beacon, upgrades), sprites, packedLight);
+        emit(consumer, pose, SectionModel.buildMoving(spec, ship.getTravel(partialTick), ship.getDoorOpen(partialTick), lights, beacon, upgrades,
+                ship.turret(), ship.getTurretRise(partialTick)), sprites, packedLight);
 
         if (ship instanceof WagonEntity wagon) {
             renderBellows(wagon, spec, yaw, pitch, partialTick, consumer, pose, sprites, packedLight);

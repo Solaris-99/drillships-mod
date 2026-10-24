@@ -1,6 +1,9 @@
 package com.solaris99.drillship.client.model;
 
+import javax.annotation.Nullable;
+
 import com.solaris99.drillship.client.model.MeshBuilder.Affine;
+import com.solaris99.drillship.ship.TeslaTurret;
 
 /**
  * The exterior of a drillhead or a wagon, built from its size so every tier (and longer sections later) gets the same
@@ -16,6 +19,7 @@ public final class SectionModel {
     public static final String PLATE = "exterior/plate" + MeshBuilder.BIG;
     public static final String ROOF = "exterior/roof";
     public static final String TRIM = "exterior/trim";
+    public static final String DRILL_STEEL = "exterior/drill_steel";
     public static final String BELLY = "exterior/belly";
     public static final String TRACK_BELT = "exterior/track_belt";
     public static final String TRACK_SIDE = "exterior/track_side";
@@ -361,10 +365,14 @@ public final class SectionModel {
      * @param lightsOn   headlights lit
      * @param beaconOn   warning beacon lit (blinking is up to the caller)
      */
-    public static MeshBuilder buildMoving(Spec spec, float travel, float doorOpen, boolean lightsOn, boolean beaconOn, int upgrades) {
+    public static MeshBuilder buildMoving(Spec spec, float travel, float doorOpen, boolean lightsOn, boolean beaconOn, int upgrades,
+            @Nullable TeslaTurret turret, float turretRise) {
         MeshBuilder mesh = new MeshBuilder();
         if (spec.drillhead()) {
             upgrades(mesh, spec, upgrades);
+        }
+        if (turret != null) {
+            turret(mesh, spec, turret, turretRise);
         }
         for (int side = -1; side <= 1; side += 2) {
             belt(mesh, spec, side, travel);
@@ -410,6 +418,30 @@ public final class SectionModel {
             mesh.box(TRIM, x - 0.06F, y, z1 + 0.2F, x + 0.06F, rod - 0.06F, z1 + 0.3F, "NSEW");
             mesh.fit(true).box(BEACON_ON, x - 0.05F, rod - 0.08F, z1 - 0.1F, x + 0.05F, rod + 0.02F, z1, "NSEWUD").fit(false);
         }
+    }
+
+    /**
+     * A tesla turret in the middle of the roof: a hatch flush with it, from which a coil with a crown of rings and a
+     * ball on top rises when there's room (see ShipSectionEntity.getTurretRise). The medium turret is bigger.
+     */
+    private static void turret(MeshBuilder mesh, Spec spec, TeslaTurret turret, float rise) {
+        float scale = turret == TeslaTurret.MEDIUM ? 1.3F : 1.0F;
+        float z = (spec.back() + spec.front()) / 2, y = spec.roof(), half = 0.55F * scale;
+        mesh.box(HATCH, -half, y, z - half, half, y + 0.05F, z + half, "NSEWU");
+        if (rise <= 0.0F) {
+            return;
+        }
+        float height = 1.1F * scale * rise, ball = 0.28F * scale;
+        Runnable coil = () -> {
+            mesh.cylinder(TRIM, TRIM, 0, y, 0.3F * scale, z, z + 0.12F, 10, false, true);
+            mesh.cylinder(PIPE, PIPE, 0, y, 0.1F * scale, z, z + height, 8, false, false);
+            for (int ring = 1; ring <= 3; ring++) {
+                float at = z + height * ring / 4.0F;
+                mesh.cylinder(TRIM, TRIM, 0, y, 0.2F * scale, at - 0.03F, at + 0.03F, 10, true, true);
+            }
+            mesh.cylinder(DRILL_STEEL, DRILL_STEEL, 0, y, ball, z + height, z + height + 2 * ball * 0.8F, 10, true, true);
+        };
+        mesh.with(Affine.rotate(new float[] {1, 0, 0}, (float) (-Math.PI / 2), new float[] {0, y, z}), coil);
     }
 
     // The belt runs around a stadium; its texture scrolls with travel.

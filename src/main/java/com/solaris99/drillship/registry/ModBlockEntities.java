@@ -6,6 +6,7 @@ import com.solaris99.drillship.Drillships;
 import com.solaris99.drillship.block.entity.EnergyIoBlockEntity;
 import com.solaris99.drillship.block.entity.FurnaceModuleBlockEntity;
 import com.solaris99.drillship.block.entity.InventoryIoBlockEntity;
+import com.solaris99.drillship.block.entity.TeslaTurretBlockEntity;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -22,6 +23,9 @@ public final class ModBlockEntities {
             () -> BlockEntityType.Builder.of(FurnaceModuleBlockEntity::new, ModBlocks.FURNACE_MODULE.get()).build(null));
     public static final Supplier<BlockEntityType<EnergyIoBlockEntity>> ENERGY_IO = BLOCK_ENTITIES.register("energy_io",
             () -> BlockEntityType.Builder.of(EnergyIoBlockEntity::new, ModBlocks.ENERGY_IO_MODULE.get()).build(null));
+
+    public static final Supplier<BlockEntityType<TeslaTurretBlockEntity>> TESLA_TURRET = BLOCK_ENTITIES.register("tesla_turret",
+            () -> BlockEntityType.Builder.of(TeslaTurretBlockEntity::new, ModBlocks.SMALL_TESLA_TURRET.get(), ModBlocks.MEDIUM_TESLA_TURRET.get()).build(null));
 
     // Exposed from any side: only the one facing into the room can be reached.
     public static void registerCapabilities(RegisterCapabilitiesEvent event) {

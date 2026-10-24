@@ -93,6 +93,10 @@ public final class ModItems {
     public static final DeferredItem<ModuleItem> ENERGY_IO_MODULE = module("energy_io_module", ModBlocks.ENERGY_IO_MODULE, ModuleItem.Placement.WALL);
     public static final DeferredItem<ModuleItem> DOOR_MODULE = module("door_module", ModBlocks.DOOR_MODULE, ModuleItem.Placement.DOOR);
     public static final DeferredItem<ModuleItem> HATCH_MODULE = module("hatch_module", ModBlocks.HATCH_MODULE, ModuleItem.Placement.HATCH);
+    public static final DeferredItem<ModuleItem> SMALL_TESLA_TURRET = module("small_tesla_turret", ModBlocks.SMALL_TESLA_TURRET,
+            ModuleItem.Placement.CEILING);
+    public static final DeferredItem<ModuleItem> MEDIUM_TESLA_TURRET = module("medium_tesla_turret", ModBlocks.MEDIUM_TESLA_TURRET,
+            ModuleItem.Placement.CEILING);
     public static final DeferredItem<ShipLocatorItem> SHIP_LOCATOR = ITEMS.register("ship_locator",
             () -> new ShipLocatorItem(new Item.Properties().stacksTo(1)));
 

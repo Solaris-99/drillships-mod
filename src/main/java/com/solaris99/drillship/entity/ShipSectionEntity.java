@@ -2,10 +2,13 @@ package com.solaris99.drillship.entity;
 
 import java.util.List;
 
+import javax.annotation.Nullable;
+
 import com.solaris99.drillship.Config;
 import com.solaris99.drillship.registry.ModKeys;
 import com.solaris99.drillship.ship.ShipShape;
 import com.solaris99.drillship.ship.ShipTier;
+import com.solaris99.drillship.ship.TeslaTurret;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
@@ -35,6 +38,7 @@ import net.minecraft.world.phys.Vec3;
  */
 public abstract class ShipSectionEntity extends Entity {
     private static final EntityDataAccessor<Integer> DATA_TIER = SynchedEntityData.defineId(ShipSectionEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> DATA_TURRET = SynchedEntityData.defineId(ShipSectionEntity.class, EntityDataSerializers.INT);
 
     // Client interpolation
     private int lerpSteps;
@@ -49,10 +53,16 @@ public abstract class ShipSectionEntity extends Entity {
     // Client: ticks left in the door's open-wait-close cycle.
     private int doorTicks;
     private int doorTicksO;
+    // Client: 0 folded flush with the roof .. 1 risen, for the tesla turret's coil.
+    private float turretRise;
+    private float turretRiseO;
 
     private static final byte EVENT_OPEN_DOOR = 100;
     private static final int DOOR_CYCLE = 40;
     private static final int DOOR_MOVE = 6;
+    private static final float TURRET_RISE_PER_TICK = 0.1F;
+    // The coil rises when this much of the space above the roof's middle is clear.
+    private static final int TURRET_CLEARANCE = 2;
 
     // Collision: a grid of parts across and along the hull (see ShipPartEntity).
     private static final int PARTS_ACROSS = 4;
@@ -114,6 +124,7 @@ public abstract class ShipSectionEntity extends Entity {
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         builder.define(DATA_TIER, 0);
+        builder.define(DATA_TURRET, 0);
     }
 
     @Override
@@ -131,6 +142,33 @@ public abstract class ShipSectionEntity extends Entity {
 
     public ShipTier tier() {
         return ShipTier.byId(entityData.get(DATA_TIER));
+    }
+
+    /** The tesla turret on this section's roof, or null. */
+    @Nullable
+    public TeslaTurret turret() {
+        return TeslaTurret.byId(entityData.get(DATA_TURRET));
+    }
+
+    protected void setTurret(@Nullable TeslaTurret turret) {
+        entityData.set(DATA_TURRET, turret == null ? 0 : turret.id());
+    }
+
+    /** Client: 0 folded flush with the roof .. 1 risen, for the turret's coil. */
+    public float getTurretRise(float partialTick) {
+        return Mth.lerp(partialTick, turretRiseO, turretRise);
+    }
+
+    // The coil rises out of the roof when there's open air above it, and folds back where there isn't, as in a tunnel.
+    private void tickTurret() {
+        turretRiseO = turretRise;
+        boolean room = turret() != null;
+        ShipShape shape = shape();
+        for (int up = 0; up < TURRET_CLEARANCE && room; up++) {
+            BlockPos pos = BlockPos.containing(frame().toWorld(0, shape.height + up + 0.5, (shape.back + shape.hullFront) / 2));
+            room = level().getBlockState(pos).getCollisionShape(level(), pos).isEmpty();
+        }
+        turretRise = room ? Math.min(1.0F, turretRise + TURRET_RISE_PER_TICK) : Math.max(0.0F, turretRise - TURRET_RISE_PER_TICK);
     }
 
     public abstract ShipShape shape();
@@ -236,6 +274,7 @@ public abstract class ShipSectionEntity extends Entity {
                 playDoorSound(SoundEvents.IRON_DOOR_CLOSE);
             }
         }
+        tickTurret();
     }
 
     /** Client: blocks driven so far, forward positive, interpolated for rendering. */

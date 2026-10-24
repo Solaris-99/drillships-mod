@@ -69,6 +69,10 @@ public class ShipState {
     private boolean drillOn;
     private boolean autoFuel = true;
     private int wagonCount;
+    // Each section's tesla turret (TeslaTurret ids, 0 for none), whether the turrets are on and what they shoot at.
+    private final int[] turrets;
+    private boolean turretsOn = true;
+    private TurretTargets turretTargets = TurretTargets.HOSTILES;
     // The upgrades in the panels, four per panel, the radio's station (0 for off) and what the radar looks for.
     private final ItemStackHandler upgrades;
     private int radioStation;
@@ -101,6 +105,7 @@ public class ShipState {
         this.position = position;
         this.yaw = yaw;
         this.inventory = new Storage(tier.inventorySlots());
+        this.turrets = new int[tier.maxWagons() + 1];
         this.fuel = handler(1, stack -> stack.getBurnTime(RecipeType.SMELTING) > 0);
         this.drill = handler(1, stack -> stack.getItem() instanceof DrillItem);
         this.upgrades = new ItemStackHandler(tier.upgradePanels() * UPGRADES_PER_PANEL) {
@@ -339,6 +344,37 @@ public class ShipState {
 
     public void clearPanelsChanged() {
         panelsChanged = false;
+    }
+
+    // Tesla turrets
+
+    /** The tesla turret on a section's roof, or null. */
+    @Nullable
+    public TeslaTurret turret(int section) {
+        return section >= 0 && section < turrets.length ? TeslaTurret.byId(turrets[section]) : null;
+    }
+
+    public void setTurret(int section, @Nullable TeslaTurret turret) {
+        turrets[section] = turret == null ? 0 : turret.id();
+        manager.setDirty();
+    }
+
+    public boolean areTurretsOn() {
+        return turretsOn;
+    }
+
+    public void setTurretsOn(boolean turretsOn) {
+        this.turretsOn = turretsOn;
+        manager.setDirty();
+    }
+
+    public TurretTargets turretTargets() {
+        return turretTargets;
+    }
+
+    public void setTurretTargets(TurretTargets turretTargets) {
+        this.turretTargets = turretTargets;
+        manager.setDirty();
     }
 
     // Wagons
@@ -743,6 +779,9 @@ public class ShipState {
         tag.putBoolean("DrillOn", drillOn);
         tag.putBoolean("AutoFuel", autoFuel);
         tag.putInt("Wagons", wagonCount);
+        tag.putIntArray("Turrets", turrets);
+        tag.putBoolean("TurretsOn", turretsOn);
+        tag.putString("TurretTargets", turretTargets.name());
         tag.put("Upgrades", upgrades.serializeNBT(registries));
         tag.putInt("RadioStation", radioStation);
         tag.putString("RadarTarget", radarTarget.name());
@@ -776,6 +815,14 @@ public class ShipState {
         ship.drillOn = tag.getBoolean("DrillOn");
         ship.autoFuel = tag.getBoolean("AutoFuel");
         ship.wagonCount = tag.getInt("Wagons");
+        int[] turrets = tag.getIntArray("Turrets");
+        System.arraycopy(turrets, 0, ship.turrets, 0, Math.min(turrets.length, ship.turrets.length));
+        ship.turretsOn = !tag.contains("TurretsOn") || tag.getBoolean("TurretsOn");
+        for (TurretTargets targets : TurretTargets.values()) {
+            if (targets.name().equals(tag.getString("TurretTargets"))) {
+                ship.turretTargets = targets;
+            }
+        }
         ship.radioStation = tag.getInt("RadioStation");
         for (RadarOre kind : RadarOre.values()) {
             if (kind.name().equals(tag.getString("RadarTarget"))) {
