@@ -29,13 +29,17 @@ final class ShipMenus {
     }
 
     static void addPlayerInventory(Consumer<Slot> addSlot, Inventory inventory, int top) {
+        addPlayerInventory(addSlot, inventory, 8, top);
+    }
+
+    static void addPlayerInventory(Consumer<Slot> addSlot, Inventory inventory, int left, int top) {
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
-                addSlot.accept(new Slot(inventory, col + row * 9 + 9, 8 + col * SLOT_SIZE, top + row * SLOT_SIZE));
+                addSlot.accept(new Slot(inventory, col + row * 9 + 9, left + col * SLOT_SIZE, top + row * SLOT_SIZE));
             }
         }
         for (int col = 0; col < 9; col++) {
-            addSlot.accept(new Slot(inventory, col, 8 + col * SLOT_SIZE, top + 58));
+            addSlot.accept(new Slot(inventory, col, left + col * SLOT_SIZE, top + 58));
         }
     }
 

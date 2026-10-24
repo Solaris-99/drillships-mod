@@ -8,6 +8,8 @@ import com.solaris99.drillship.block.ModuleBlock;
 import com.solaris99.drillship.block.ModuleDoorBlock;
 import com.solaris99.drillship.block.ShipDoorBlock;
 import com.solaris99.drillship.block.ShipInteriorBlock;
+import com.solaris99.drillship.block.TeslaTurretBlock;
+import com.solaris99.drillship.ship.TeslaTurret;
 import com.solaris99.drillship.block.UpgradePanelBlock;
 
 import net.minecraft.core.BlockPos;
@@ -67,6 +69,10 @@ public final class ModBlocks {
     public static final DeferredBlock<ModuleBlock> ENERGY_IO_MODULE = module("energy_io_module", ModuleBlock.Kind.ENERGY_IO);
     public static final DeferredBlock<ModuleDoorBlock> DOOR_MODULE = BLOCKS.register("door_module", () -> new ModuleDoorBlock(interior()));
     public static final DeferredBlock<ModuleBlock> HATCH_MODULE = module("hatch_module", ModuleBlock.Kind.HATCH);
+    public static final DeferredBlock<TeslaTurretBlock> SMALL_TESLA_TURRET = BLOCKS.register("small_tesla_turret",
+            () -> new TeslaTurretBlock(TeslaTurret.SMALL, interior()));
+    public static final DeferredBlock<TeslaTurretBlock> MEDIUM_TESLA_TURRET = BLOCKS.register("medium_tesla_turret",
+            () -> new TeslaTurretBlock(TeslaTurret.MEDIUM, interior()));
 
     // The cockpit (see InteriorLayout.cockpit): the driver's chair, the desk across the front, the consoles beside the
     // chair, screens on the front wall, and the glazed bulkhead that sets it apart from the rest of the cabin.

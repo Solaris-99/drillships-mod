@@ -13,6 +13,7 @@ public final class ModKeys {
 
     public static final ResourceKey<DamageType> DRILL_DAMAGE = ResourceKey.create(Registries.DAMAGE_TYPE, Drillships.id("drill"));
     public static final ResourceKey<DamageType> SQUASH_DAMAGE = ResourceKey.create(Registries.DAMAGE_TYPE, Drillships.id("squash"));
+    public static final ResourceKey<DamageType> TESLA_DAMAGE = ResourceKey.create(Registries.DAMAGE_TYPE, Drillships.id("tesla"));
 
     private ModKeys() {
     }

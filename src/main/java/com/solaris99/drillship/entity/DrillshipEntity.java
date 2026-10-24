@@ -290,6 +290,7 @@ public class DrillshipEntity extends ShipSectionEntity {
         entityData.set(DATA_BURNING, ship.isBurning());
         entityData.set(DATA_CUTTING, cutting);
         entityData.set(DATA_UPGRADES, ship.upgradeMask());
+        setTurret(ship.turret(0));
         entityData.set(DATA_RADIO, ship.radioStation());
         ship.updatePose(level.dimension(), position(), getYRot(), getXRot(), displacement.length() * 20.0);
 

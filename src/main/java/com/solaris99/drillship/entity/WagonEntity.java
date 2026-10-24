@@ -87,6 +87,7 @@ public class WagonEntity extends ShipSectionEntity {
         Entity leader = wagon == 1 ? ship.findEntity(server) : ShipWagons.findEntity(server, ship, wagon - 1);
         entityData.set(DATA_LEADER, leader != null ? leader.getId() : -1);
         Vec3 start = position();
+        setTurret(ship.turret(wagon));
         ShipState.Pose pose = ship.wagonPose(wagon);
         setPose(pose.position(), pose.yaw(), pose.pitch());
         if (position().distanceToSqr(start) > 1.0E-6) {

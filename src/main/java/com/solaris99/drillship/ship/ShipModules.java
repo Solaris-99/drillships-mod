@@ -7,6 +7,7 @@ import javax.annotation.Nullable;
 
 import com.solaris99.drillship.block.ModuleBlock;
 import com.solaris99.drillship.block.ModuleDoorBlock;
+import com.solaris99.drillship.block.TeslaTurretBlock;
 import com.solaris99.drillship.block.entity.ModuleBlockEntity;
 import com.solaris99.drillship.item.ModuleItem;
 import com.solaris99.drillship.registry.ModBlocks;
@@ -27,7 +28,8 @@ import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 /**
  * Installing modules in a ship's hull and taking them out. A module replaces a free shell block of a room, drillhead or
  * wagon: a side or end wall block (plating, kick plate or pipes, not the corner beams), or for the hatch a floor or
- * ceiling block away from the walls. Taking it out with a wrench puts that shell block back.
+ * ceiling block away from the walls, and for a tesla turret a ceiling block of a section that has none yet. Taking it out
+ * with a wrench puts that shell block back.
  */
 public final class ShipModules {
     private static final int FLAGS = Block.UPDATE_CLIENTS;
@@ -36,10 +38,11 @@ public final class ShipModules {
     @Nullable
     public static Component install(ServerLevel level, BlockPos pos, ModuleItem item) {
         Component cantGoHere = Component.translatable("message.drillships.module_cant_go_here");
-        InteriorLayout.Room room = room(level, pos);
-        if (room == null) {
+        Place place = place(level, pos);
+        if (place == null) {
             return cantGoHere;
         }
+        InteriorLayout.Room room = place.room();
         BlockState module = item.block().defaultBlockState();
         switch (item.placement()) {
             case WALL -> {
@@ -53,6 +56,16 @@ public final class ShipModules {
                     return cantGoHere;
                 }
                 level.setBlock(pos, module, FLAGS);
+            }
+            case CEILING -> {
+                if (!isFreeFloorOrCeiling(level, room, pos) || !level.getBlockState(pos).is(ModBlocks.HULL_CEILING.get())) {
+                    return cantGoHere;
+                }
+                if (place.ship().turret(place.section()) != null) {
+                    return Component.translatable("message.drillships.one_turret");
+                }
+                level.setBlock(pos, module, FLAGS);
+                place.ship().setTurret(place.section(), ((TeslaTurretBlock) item.block()).turret());
             }
             case DOOR -> {
                 BlockPos lower = isFreeWall(level, room, pos.above()) ? pos : pos.below();
@@ -70,9 +83,13 @@ public final class ShipModules {
     /** Takes out the module at {@code pos}, giving the player the module and whatever it held. Returns false if there is none. */
     public static boolean remove(ServerLevel level, BlockPos pos, Player player) {
         BlockState state = level.getBlockState(pos);
-        InteriorLayout.Room room = room(level, pos);
-        if (!(state.getBlock() instanceof ModuleBlock module) || room == null) {
+        Place place = place(level, pos);
+        if (!(state.getBlock() instanceof ModuleBlock module) || place == null) {
             return false;
+        }
+        InteriorLayout.Room room = place.room();
+        if (module instanceof TeslaTurretBlock) {
+            place.ship().setTurret(place.section(), null);
         }
         List<ItemStack> returned = new ArrayList<>();
         returned.add(new ItemStack(BuiltInRegistries.ITEM.get(BuiltInRegistries.BLOCK.getKey(module))));
@@ -98,12 +115,15 @@ public final class ShipModules {
         return false;
     }
 
-    // The room of an attached section that contains pos.
+    private record Place(ShipState ship, int section, InteriorLayout.Room room) {
+    }
+
+    // The attached section whose room contains pos.
     @Nullable
-    private static InteriorLayout.Room room(ServerLevel level, BlockPos pos) {
+    private static Place place(ServerLevel level, BlockPos pos) {
         ShipState ship = level.dimension() == ModKeys.INTERIOR ? ShipManager.get(level.getServer()).byInteriorPos(pos) : null;
         int section = ship == null ? -1 : ship.layout().sectionAt(pos);
-        return section < 0 || section > ship.wagonCount() ? null : ship.layout().room(section);
+        return section < 0 || section > ship.wagonCount() ? null : new Place(ship, section, ship.layout().room(section));
     }
 
     private static boolean isFreeWall(ServerLevel level, InteriorLayout.Room room, BlockPos pos) {

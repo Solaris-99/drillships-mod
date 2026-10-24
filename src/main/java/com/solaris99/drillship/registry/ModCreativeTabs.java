@@ -39,6 +39,8 @@ public final class ModCreativeTabs {
                 output.accept(ModItems.ENERGY_IO_MODULE.get());
                 output.accept(ModItems.DOOR_MODULE.get());
                 output.accept(ModItems.HATCH_MODULE.get());
+                output.accept(ModItems.SMALL_TESLA_TURRET.get());
+                output.accept(ModItems.MEDIUM_TESLA_TURRET.get());
                 output.accept(ModItems.SHIP_LOCATOR.get());
             }).build());
 

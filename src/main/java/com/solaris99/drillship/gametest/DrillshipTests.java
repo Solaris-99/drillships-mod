@@ -11,6 +11,7 @@ import com.solaris99.drillship.block.entity.ItemFilter;
 import com.solaris99.drillship.entity.DrillshipEntity;
 import com.solaris99.drillship.entity.WagonEntity;
 import com.solaris99.drillship.item.DrillshipItem;
+import com.solaris99.drillship.item.ModuleItem;
 import com.solaris99.drillship.item.WagonItem;
 import com.solaris99.drillship.registry.ModBlocks;
 import com.solaris99.drillship.registry.ModComponents;
@@ -27,6 +28,8 @@ import com.solaris99.drillship.ship.ShipTier;
 import com.solaris99.drillship.ship.ShipTravel;
 import com.solaris99.drillship.ship.ShipUpgrade;
 import com.solaris99.drillship.ship.ShipWagons;
+import com.solaris99.drillship.ship.TeslaTurret;
+import com.solaris99.drillship.ship.TurretTargets;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
@@ -36,6 +39,11 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.animal.Cow;
+import net.minecraft.world.entity.monster.Husk;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
@@ -49,6 +57,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.IItemHandlerModifiable;
 import net.neoforged.neoforge.items.ItemHandlerHelper;
+
 
 /** Run with {@code ./gradlew runGameTestServer}. Each test uses an empty 13x10x28 area; the ship faces +Z. */
 @GameTestHolder(Drillships.MODID)
@@ -497,6 +506,57 @@ public class DrillshipTests {
         helper.succeed();
     }
 
+    // Tesla turrets
+
+    @GameTest(template = TEMPLATE)
+    public static void teslaTurretZapsHostilesThroughArmor(GameTestHelper helper) {
+        floor(helper);
+        ShipState ship = place(helper, ORIGIN);
+        installTurret(helper, ship, ModItems.SMALL_TESLA_TURRET.get());
+        Husk husk = target(helper, EntityType.HUSK, 11.0);
+        for (EquipmentSlot slot : new EquipmentSlot[] {EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
+            husk.setItemSlot(slot, new ItemStack(switch (slot) {
+                case HEAD -> Items.DIAMOND_HELMET;
+                case CHEST -> Items.DIAMOND_CHESTPLATE;
+                case LEGS -> Items.DIAMOND_LEGGINGS;
+                default -> Items.DIAMOND_BOOTS;
+            }));
+        }
+        Cow cow = target(helper, EntityType.COW, 2.0);
+        helper.runAfterDelay(12, () -> {
+            float taken = husk.getMaxHealth() - husk.getHealth();
+            helper.assertTrue(taken == 8.0F || taken == 12.0F, "Two or three full 4-damage hits through diamond armor, but it took " + taken);
+            helper.assertTrue(cow.getHealth() == cow.getMaxHealth(), "Hostiles only: the cow is left alone");
+            remove(helper, ship);
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = TEMPLATE)
+    public static void teslaTurretSettings(GameTestHelper helper) {
+        floor(helper);
+        ShipState ship = place(helper, ORIGIN);
+        ServerLevel interior = interior(helper);
+        BlockPos mount = installTurret(helper, ship, ModItems.MEDIUM_TESLA_TURRET.get());
+        helper.assertTrue(ShipModules.install(interior, mount.east(), ModItems.SMALL_TESLA_TURRET.get()) != null, "One turret per section");
+        helper.assertTrue(ship.turret(0) == TeslaTurret.MEDIUM, "The ship knows its turret");
+        ship.setTurretsOn(false);
+        Cow cow = target(helper, EntityType.COW, 2.0);
+        helper.runAfterDelay(12, () -> {
+            helper.assertTrue(cow.getHealth() == cow.getMaxHealth(), "Switched off, the turret doesn't fire");
+            ship.setTurretsOn(true);
+            ship.setTurretTargets(TurretTargets.EVERYTHING);
+            helper.runAfterDelay(12, () -> {
+                helper.assertTrue(cow.getHealth() < cow.getMaxHealth(), "Targeting everything, it zaps the cow");
+                ServerPlayer player = helper.makeMockServerPlayerInLevel();
+                helper.assertTrue(ShipModules.remove(interior, mount, player) && ship.turret(0) == null
+                        && interior.getBlockState(mount).is(ModBlocks.HULL_CEILING.get()), "The wrench takes the turret out");
+                remove(helper, ship);
+                helper.succeed();
+            });
+        });
+    }
+
     // Wagons
 
     private static final Vec3 LONG_ORIGIN = new Vec3(7.5, 1, 16.5);
@@ -690,6 +750,28 @@ public class DrillshipTests {
             }
         }
         return false;
+    }
+
+    // Into the first free block of the drillhead's ceiling (the middle one holds the lamp).
+    private static BlockPos installTurret(GameTestHelper helper, ShipState ship, ModuleItem turret) {
+        InteriorLayout.Room room = ship.layout().room(0);
+        for (int x = 1; x < room.sizeX() - 1; x++) {
+            for (int z = 1; z < room.sizeZ() - 1; z++) {
+                BlockPos mount = room.origin().offset(x, room.sizeY() - 1, z);
+                if (interior(helper).getBlockState(mount).is(ModBlocks.HULL_CEILING.get())) {
+                    helper.assertTrue(ShipModules.install(interior(helper), mount, turret) == null, "A turret goes into the ceiling");
+                    return mount;
+                }
+            }
+        }
+        throw new GameTestAssertException("No free ceiling block in the drillhead");
+    }
+
+    // A mob standing still beside the ship, at relative x.
+    private static <T extends Mob> T target(GameTestHelper helper, EntityType<T> type, double x) {
+        T mob = helper.spawn(type, new Vec3(x, 1, ORIGIN.z));
+        mob.setNoAi(true);
+        return mob;
     }
 
     private static ServerLevel interior(GameTestHelper helper) {

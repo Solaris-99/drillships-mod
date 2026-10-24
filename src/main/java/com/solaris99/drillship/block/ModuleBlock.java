@@ -7,6 +7,7 @@ import javax.annotation.Nullable;
 import com.solaris99.drillship.block.entity.EnergyIoBlockEntity;
 import com.solaris99.drillship.block.entity.FurnaceModuleBlockEntity;
 import com.solaris99.drillship.block.entity.InventoryIoBlockEntity;
+import com.solaris99.drillship.block.entity.TeslaTurretBlockEntity;
 import com.solaris99.drillship.block.entity.IoMode;
 import com.solaris99.drillship.menu.CraftingStorageMenu;
 import com.solaris99.drillship.menu.EnergyIoMenu;
@@ -14,6 +15,7 @@ import com.solaris99.drillship.menu.FurnaceModuleMenu;
 import com.solaris99.drillship.menu.InventoryIoMenu;
 import com.solaris99.drillship.menu.ShipCraftingMenu;
 import com.solaris99.drillship.menu.ShipStorageMenu;
+import com.solaris99.drillship.menu.StatusMenu;
 import com.solaris99.drillship.registry.ModBlockEntities;
 import com.solaris99.drillship.registry.ModTags;
 import com.solaris99.drillship.ship.ShipManager;
@@ -46,7 +48,7 @@ import net.minecraft.world.phys.BlockHitResult;
  */
 public class ModuleBlock extends Block implements EntityBlock {
     public enum Kind {
-        CRAFTING, CRAFTING_INVENTORY_ACCESS, INVENTORY_ACCESS, INVENTORY_IO, FURNACE, ENERGY_IO, DOOR, HATCH
+        CRAFTING, CRAFTING_INVENTORY_ACCESS, INVENTORY_ACCESS, INVENTORY_IO, FURNACE, ENERGY_IO, DOOR, HATCH, TESLA_TURRET
     }
 
     private final Kind kind;
@@ -72,6 +74,7 @@ public class ModuleBlock extends Block implements EntityBlock {
             case INVENTORY_IO -> new InventoryIoBlockEntity(pos, state);
             case FURNACE -> new FurnaceModuleBlockEntity(pos, state);
             case ENERGY_IO -> new EnergyIoBlockEntity(pos, state);
+            case TESLA_TURRET -> new TeslaTurretBlockEntity(pos, state);
             default -> null;
         };
     }
@@ -80,10 +83,16 @@ public class ModuleBlock extends Block implements EntityBlock {
     @Override
     @SuppressWarnings("unchecked")
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-        if (level.isClientSide() || type != ModBlockEntities.FURNACE_MODULE.get()) {
+        if (level.isClientSide()) {
             return null;
         }
-        return (BlockEntityTicker<T>) (BlockEntityTicker<FurnaceModuleBlockEntity>) FurnaceModuleBlockEntity::serverTick;
+        if (type == ModBlockEntities.FURNACE_MODULE.get()) {
+            return (BlockEntityTicker<T>) (BlockEntityTicker<FurnaceModuleBlockEntity>) FurnaceModuleBlockEntity::serverTick;
+        }
+        if (type == ModBlockEntities.TESLA_TURRET.get()) {
+            return (BlockEntityTicker<T>) (BlockEntityTicker<TeslaTurretBlockEntity>) TeslaTurretBlockEntity::serverTick;
+        }
+        return null;
     }
 
     @Override
@@ -105,6 +114,8 @@ public class ModuleBlock extends Block implements EntityBlock {
             case FURNACE -> FurnaceModuleMenu.open(serverPlayer, pos);
             case ENERGY_IO -> EnergyIoMenu.open(serverPlayer, pos);
             case DOOR, HATCH -> ShipTravel.exitThroughModule(serverPlayer, ship, base(state, pos));
+            // The turrets' settings are on the status panel.
+            case TESLA_TURRET -> StatusMenu.open(serverPlayer, ship, pos);
         }
         return InteractionResult.CONSUME;
     }

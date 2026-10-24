@@ -2,13 +2,16 @@ package com.solaris99.drillship.client;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 import com.solaris99.drillship.menu.StatusMenu;
 import com.solaris99.drillship.ship.ShipState;
+import com.solaris99.drillship.ship.TurretTargets;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -17,7 +20,8 @@ public class StatusScreen extends AbstractContainerScreen<StatusMenu> {
     private static final int TEXT = 0x404040;
     private static final int WARNING = 0xB02020;
     private static final int LINE_HEIGHT = 10;
-    private static final int BUTTONS_TOP = StatusMenu.INVENTORY_Y - 54;
+    private static final int BUTTON_WIDTH = 80;
+    private static final int BUTTON_HEIGHT = 16;
     private static final int[] WARNING_FLAGS = {
             ShipState.WARN_NO_ENERGY, ShipState.WARN_LOW_ENERGY, ShipState.WARN_INVENTORY_FULL, ShipState.WARN_NO_DRILL,
             ShipState.WARN_DRILL_BROKEN, ShipState.WARN_DRILL_WORN, ShipState.WARN_BLOCKED,
@@ -28,28 +32,37 @@ public class StatusScreen extends AbstractContainerScreen<StatusMenu> {
 
     private Button drillButton;
     private Button autoFuelButton;
+    private Button turretsButton;
+    private Button turretTargetsButton;
 
     public StatusScreen(StatusMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
-        this.imageWidth = 176;
+        this.imageWidth = StatusMenu.WIDTH;
         this.imageHeight = StatusMenu.INVENTORY_Y + 82;
+        this.inventoryLabelX = StatusMenu.INVENTORY_X;
         this.inventoryLabelY = StatusMenu.INVENTORY_Y - 11;
     }
 
     @Override
     protected void init() {
         super.init();
-        int top = topPos + BUTTONS_TOP;
-        drillButton = addRenderableWidget(Button.builder(Component.empty(), b -> press(StatusMenu.BUTTON_TOGGLE_DRILL))
-                .bounds(leftPos + 7, top, 80, 18).build());
-        autoFuelButton = addRenderableWidget(Button.builder(Component.empty(), b -> press(StatusMenu.BUTTON_TOGGLE_AUTO_FUEL))
-                .bounds(leftPos + 89, top, 80, 18).build());
-        addRenderableWidget(Button.builder(Component.translatable("gui.drillships.detach_wagon"), b -> press(StatusMenu.BUTTON_DETACH_WAGON))
-                .bounds(leftPos + 7, top + 20, 80, 18).build());
-        addRenderableWidget(Button.builder(Component.translatable("gui.drillships.pick_up"), b -> press(StatusMenu.BUTTON_PICK_UP))
-                .bounds(leftPos + 89, top + 20, 80, 18).build());
+        drillButton = button(0, 0, Component.empty(), StatusMenu.BUTTON_TOGGLE_DRILL);
+        autoFuelButton = button(1, 0, Component.empty(), StatusMenu.BUTTON_TOGGLE_AUTO_FUEL);
+        button(0, 1, Component.translatable("gui.drillships.detach_wagon"), StatusMenu.BUTTON_DETACH_WAGON);
+        button(1, 1, Component.translatable("gui.drillships.pick_up"), StatusMenu.BUTTON_PICK_UP);
+        turretsButton = button(0, 2, Component.empty(), StatusMenu.BUTTON_TOGGLE_TURRETS);
+        turretTargetsButton = button(1, 2, Component.empty(), StatusMenu.BUTTON_CYCLE_TURRET_TARGETS);
+        turretTargetsButton.setTooltip(Tooltip.create(Component.translatable("gui.drillships.turret_targets")));
         addRenderableWidget(Button.builder(Component.translatable("gui.drillships.controls"), b -> minecraft.setScreen(new DriveControlsScreen(this)))
                 .bounds(leftPos + imageWidth - 64, topPos + 3, 60, 14).build());
+    }
+
+    // The right column's buttons, two to a row under the slots.
+    private Button button(int column, int row, Component label, int id) {
+        return addRenderableWidget(Button.builder(label, b -> press(id))
+                .bounds(leftPos + StatusMenu.RIGHT_COLUMN_X + column * (BUTTON_WIDTH + 4), topPos + StatusMenu.BUTTONS_Y + row * (BUTTON_HEIGHT + 2),
+                        BUTTON_WIDTH, BUTTON_HEIGHT)
+                .build());
     }
 
     private void press(int button) {
@@ -63,6 +76,9 @@ public class StatusScreen extends AbstractContainerScreen<StatusMenu> {
         super.containerTick();
         drillButton.setMessage(Component.translatable(menu.hasFlag(StatusMenu.FLAG_DRILL_ON) ? "gui.drillships.drill_on" : "gui.drillships.drill_off"));
         autoFuelButton.setMessage(Component.translatable(menu.hasFlag(StatusMenu.FLAG_AUTO_FUEL) ? "gui.drillships.auto_fuel_on" : "gui.drillships.auto_fuel_off"));
+        turretsButton.setMessage(Component.translatable(menu.hasFlag(StatusMenu.FLAG_TURRETS_ON) ? "gui.drillships.turrets_on" : "gui.drillships.turrets_off"));
+        turretTargetsButton.setMessage(Component.translatable("gui.drillships.turret_targets."
+                + TurretTargets.byId(menu.get(StatusMenu.TURRET_TARGETS)).name().toLowerCase(Locale.ROOT)));
     }
 
     @Override
@@ -74,24 +90,32 @@ public class StatusScreen extends AbstractContainerScreen<StatusMenu> {
     @Override
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
         super.renderLabels(graphics, mouseX, mouseY);
-        int x = 8;
         int y = 18;
         for (Component line : readouts()) {
-            graphics.drawString(font, line, x, y, TEXT, false);
+            graphics.drawString(font, line, 8, y, TEXT, false);
             y += LINE_HEIGHT;
         }
-        graphics.drawString(font, Component.translatable("gui.drillships.drill_slot"), StatusMenu.DRILL_SLOT_X - 2, StatusMenu.DRILL_SLOT_Y + 18, TEXT, false);
-        graphics.drawString(font, Component.translatable("gui.drillships.fuel_slot"), StatusMenu.FUEL_SLOT_X - 2, StatusMenu.FUEL_SLOT_Y + 18, TEXT, false);
-        graphics.drawString(font, Component.translatable("gui.drillships.wagon_slot"), StatusMenu.WAGON_SLOT_X - 6, StatusMenu.WAGON_SLOT_Y + 18, TEXT, false);
+        slotLabel(graphics, "gui.drillships.drill_slot", StatusMenu.DRILL_SLOT_X);
+        slotLabel(graphics, "gui.drillships.fuel_slot", StatusMenu.FUEL_SLOT_X);
+        slotLabel(graphics, "gui.drillships.wagon_slot", StatusMenu.WAGON_SLOT_X);
 
-        y += 2;
-        int warnings = menu.get(StatusMenu.WARNINGS);
-        for (int i = 0; i < WARNING_FLAGS.length && y + LINE_HEIGHT <= BUTTONS_TOP; i++) {
+        // Two to a row, as many as fit above the player's inventory.
+        int warnings = menu.get(StatusMenu.WARNINGS), shown = 0;
+        int rows = (StatusMenu.INVENTORY_Y - 12 - StatusMenu.WARNINGS_Y) / LINE_HEIGHT;
+        for (int i = 0; i < WARNING_FLAGS.length && shown < rows * 2; i++) {
             if ((warnings & WARNING_FLAGS[i]) != 0) {
-                graphics.drawString(font, Component.literal("⚠ ").append(Component.translatable("warning.drillships." + WARNING_KEYS[i])), x, y, WARNING, false);
-                y += LINE_HEIGHT;
+                int x = shown % 2 == 0 ? 8 : StatusMenu.RIGHT_COLUMN_X;
+                graphics.drawString(font, Component.literal("⚠ ").append(Component.translatable("warning.drillships." + WARNING_KEYS[i])),
+                        x, StatusMenu.WARNINGS_Y + shown / 2 * LINE_HEIGHT, WARNING, false);
+                shown++;
             }
         }
+    }
+
+    // Centred above its slot.
+    private void slotLabel(GuiGraphics graphics, String key, int slotX) {
+        Component label = Component.translatable(key);
+        graphics.drawString(font, label, slotX + 8 - font.width(label) / 2, StatusMenu.SLOTS_Y - 10, TEXT, false);
     }
 
     private List<Component> readouts() {
