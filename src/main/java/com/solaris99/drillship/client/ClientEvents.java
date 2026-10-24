@@ -13,9 +13,13 @@ import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.RenderBlockScreenEffectEvent;
 import net.neoforged.neoforge.client.event.RenderHandEvent;
 import net.neoforged.neoforge.client.event.RenderPlayerEvent;
+import net.neoforged.neoforge.client.event.ViewportEvent;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 
 public final class ClientEvents {
+    // The field of view the world was last drawn with, so the HUD can put marks where things are on screen.
+    private static double fov = 70.0;
+
     public static void registerKeys(RegisterKeyMappingsEvent event) {
         DriveControls.register(event);
     }
@@ -28,6 +32,17 @@ public final class ClientEvents {
         bus.addListener(ClientEvents::onRenderBlockOverlay);
         bus.addListener(ClientEvents::onCameraDistance);
         bus.addListener(ClientEvents::onEntityJoin);
+        bus.addListener(ClientEvents::onComputeFov);
+    }
+
+    static double fov() {
+        return fov;
+    }
+
+    private static void onComputeFov(ViewportEvent.ComputeFov event) {
+        if (event.usedConfiguredFov()) {
+            fov = event.getFOV();
+        }
     }
 
     public static boolean isDriving(LocalPlayer player) {

@@ -63,16 +63,20 @@ The hull is one block thick, so the exterior is the interior plus 2 in each dire
 | Action | Default | Notes |
 |--|--|--|
 | Accelerate / brake and reverse | W / S | Reverse up to 25% of top speed |
-| Steer left / right | A / D | |
-| Pitch up / down | Space / Left Ctrl | Limited to ±30° |
+| Steer | Mouse | The ship turns and pitches toward where the driver looks (see Steering below) |
 | Drill | F | Toggle (press to start, press again to stop) or hold (spins while held), chosen in the controls panel |
 | Radar target | R | The next kind of ore for the radar to look for (with a radar upgrade) |
 | Leave the helm | Left Shift | |
 
-Every action can be bound to any key or mouse button, in the **controls panel** (the Controls button on the status panel) or in vanilla's key binds under "Drillships". The bindings are only live while driving, so they may share keys with anything done on foot: while driving, vanilla actions on the same keys are held back (a click bound to the drill doesn't also attack; Shift bound to pitching down doesn't also leave the helm, since leaving is whatever key "Leave the helm" is on). The panel shows two driving actions on the same key in red. The drill mode is a client setting (`drillships-client.toml`, `drillMode`).
+Every action can be bound to any key or mouse button, in the **controls panel** (the Controls button on the status panel) or in vanilla's key binds under "Drillships". The bindings are only live while driving, so they may share keys with anything done on foot: while driving, vanilla actions on the same keys are held back (a click bound to the drill doesn't also attack; leaving is whatever key "Leave the helm" is on, not vanilla's sneak). The panel shows two driving actions on the same key in red. The drill mode is a client setting (`drillships-client.toml`, `drillMode`).
+
+### Steering
+- The ship steers toward where the driver looks, stopped or moving (stopped, it turns in place): it turns at up to 2.7°/tick and pitches at up to 1.35°/tick until it faces the crosshair. There are no steering keys.
+- **Pitch** follows the look, limited to ±30°. A look within 5° of the horizon asks for level: out in the open that is left to levelling out (see Movement rules), so the ship settles onto its tracks; with its drill in terrain, or flying with an antigravity engine, it pitches level itself.
+- **Looking around** is limited to 60° either side of the ship's heading and 45° up or down, so the driver can't look behind the ship. The view doesn't turn with the ship: the ship turns to meet it.
 
 ### Camera
-- **First person (periscope):** the eye sits on the drill's axis, 1 block behind the hull's front face. Blocks being drilled can reach at most √3/2 of a block into the hull, so they never cover the view, and the "inside a block" overlay is suppressed while driving. The view turns and pitches with the ship, so the crosshair points where the drill is heading.
+- **First person (periscope):** the eye sits on the drill's axis, 1 block behind the hull's front face. Blocks being drilled can reach at most √3/2 of a block into the hull, so they never cover the view, and the "inside a block" overlay is suppressed while driving. The view stays where the driver looks while the ship turns to follow it (see Steering). Nothing of the drillhead is drawn from in here, since the eye is inside its hull; the steering marker on the HUD shows where its nose points.
 - **Third person:** the camera backs off to the hull's length plus 1.5 × its height, enough to see the whole drillhead.
 - A ship section is not drawn while the camera is inside it (or within 0.2 blocks), e.g. the drillhead from the periscope or a wagon when a tunnel pulls the third-person camera in.
 
@@ -82,15 +86,14 @@ While driving, a HUD styled like an old military terminal (green monospace text 
 - **Power:** a bar, percentage and FE stored / capacity.
 - **Drill:** on/off and durability.
 - **Speed.**
+- **Steering marker:** a green circle where the ship's nose points, with a line from it to the crosshair (where the driver looks, and so where the ship is turning). Once the ship faces the look, the circle sits on the crosshair. A nose outside the view is shown at the screen's edge, in its direction.
 - **Warnings**, blinking: inventory full, no/low power, no drill, drill broken/worn, path blocked.
 - **Radar** (a compass line at the top), when the ship has radar upgrades (see section 6, Radar).
-
-*Later:* steering with the mouse through the periscope, with two modes. **Drive** mode, used while moving, limits the view to the front of the ship. **Free look** mode, only available while stopped, lets the player look around freely.
 
 ### Movement rules
 - The ship turns freely (any angle) and climbs 1-block steps when the drill is off.
 - **Support and falling:** what holds the drillhead up is whatever lies under its tracks (from the back to the drill face), or its drill biting into terrain. With neither, it falls, keeping its horizontal momentum; a level landing snaps to the block grid.
-- **Levelling out:** out in the open (nothing in the drill zone) and with the driver not pitching, a tilted ship turns back to level, accelerating (0.25°/tick², up to 4°/tick), hinged on its front-most support (else its rear-most, else its middle). Coming out of a tunnel on the surface it drops its nose and settles on its tracks instead of staying pointed at the sky; after landing nose first, its back comes down. While still inside the tunnel, or resting on a slope, it can't turn and stays as it is. With the drill in terrain it keeps whatever angle it was drilling at.
+- **Levelling out:** out in the open (nothing in the drill zone) and with the driver looking level (or nobody driving), a tilted ship turns back to level, accelerating (0.25°/tick², up to 4°/tick), hinged on its front-most support (else its rear-most, else its middle). Coming out of a tunnel on the surface it drops its nose and settles on its tracks instead of staying pointed at the sky; after landing nose first, its back comes down. While still inside the tunnel, or resting on a slope, it can't turn and stays as it is. With the drill in terrain it keeps whatever angle it was drilling at, unless the driver steers it.
 - **Coupled sections never cross:** before the drillhead turns, pitches, levels out or drives, the new pose is checked against the first wagon (and, when driving, every coupled pair at the poses the path would give them): if two neighbours would start overlapping, or the drillhead would bend more than 35° / 40° / 35° away from the first wagon, that motion doesn't happen and the "path blocked" warning lights. A joint already past its limit may always straighten out. Falling is never held back by the wagons.
 - **Fluids:** the ship drives through water and lava like any entity. Fluids never get into the interior.
 - **Energy:** moving costs 1 FE/t *(config)*, plus 10 FE/t per engine overdrive. At 0 energy the ship stops and a warning lights up.
@@ -623,7 +626,7 @@ Spawned on the client, at the exterior model's positions:
 5. **Standard and hardened tiers, materials and alloys.**
 6. **Ore deposits** (the radar is done, see 2b F).
 7. **Filters and barrels.**
-8. **Mouse steering through the periscope.**
+8. **Mouse steering through the periscope: done** on `feat-mouse-steering`. The ship follows the driver's look within 60° / 45°, shown on the HUD by the steering marker (see Steering and Driver HUD). Gametest: `steerstowardthelook`.
 9. **Destruction:** ship health and armor, and the Self-Healing Hull upgrade.
 
 ## 18. Open questions

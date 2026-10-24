@@ -81,11 +81,14 @@ public class DrillshipEntity extends ShipSectionEntity {
     // Levelling out, in degrees per tick: it starts slowly and speeds up, like a falling body.
     private static final float LEVEL_ACCELERATION = 0.25F;
     private static final float MAX_LEVEL_SPEED = 4.0F;
-    private static final float TURN_RATE = 2.0F;
-    private static final float PITCH_RATE = 1.0F;
+    private static final float TURN_RATE = 2.7F;
+    private static final float PITCH_RATE = 1.35F;
     private static final float MAX_PITCH = 30.0F;
-    // How far the driver may look away from the ship's heading while it moves.
-    private static final float DRIVER_LOOK_LIMIT = 70.0F;
+    // How far the driver may look away from the ship's heading, and up or down: never behind the ship.
+    private static final float LOOK_YAW_LIMIT = 60.0F;
+    private static final float LOOK_PITCH_LIMIT = 45.0F;
+    // A look within this many degrees of the horizon steers the ship level.
+    private static final float LEVEL_LOOK = 5.0F;
     // How far behind the hull's front face the driver's eye sits. Blocks being drilled have their centers ahead of the
     // hull, so they can reach at most sqrt(3)/2 into it: from here the eye is never inside one.
     private static final double DRIVER_EYE_SETBACK = 1.0;
@@ -97,9 +100,8 @@ public class DrillshipEntity extends ShipSectionEntity {
 
     // Server
     private float inputForward;
-    private float inputLeft;
-    private boolean inputUp;
-    private boolean inputDown;
+    // The driver is looking up or down rather than level, so the ship mustn't level out on its own.
+    private boolean steeringPitch;
     private double speed;
     private double fallSpeed;
     private float levelSpeed;
@@ -213,11 +215,8 @@ public class DrillshipEntity extends ShipSectionEntity {
 
     // Input from the driver's client
 
-    public void setInput(float forward, float left, boolean up, boolean down) {
+    public void setInput(float forward) {
         this.inputForward = Mth.clamp(forward, -1.0F, 1.0F);
-        this.inputLeft = Mth.clamp(left, -1.0F, 1.0F);
-        this.inputUp = up;
-        this.inputDown = down;
     }
 
     @Nullable
@@ -251,7 +250,7 @@ public class DrillshipEntity extends ShipSectionEntity {
     private void tickServer(ServerLevel level, ShipState ship) {
         ServerPlayer driver = getDriver();
         if (driver == null) {
-            setInput(0, 0, false, false);
+            setInput(0);
         }
         ShipShape shape = shape();
         blockers.clear();
@@ -264,7 +263,7 @@ public class DrillshipEntity extends ShipSectionEntity {
 
         updateSpeed(ship);
         Vec3 start = position();
-        rotate(level, ship, shape);
+        rotate(level, ship, shape, driver);
         move(level, ship, shape, drilling);
         applyPhysics(level, ship, shape);
 
@@ -318,16 +317,23 @@ public class DrillshipEntity extends ShipSectionEntity {
         }
     }
 
-    private void rotate(ServerLevel level, ShipState ship, ShipShape shape) {
-        float yaw = getYRot() - inputLeft * TURN_RATE;
+    /**
+     * Steering: the ship turns and pitches toward where the driver looks, as fast as it can. A look close to the
+     * horizon asks for level, which out in the open is left to levelling out (see applyPhysics), so the ship settles
+     * onto its tracks instead of pivoting; in terrain, or flying, the ship pitches level itself.
+     */
+    private void rotate(ServerLevel level, ShipState ship, ShipShape shape, @Nullable ServerPlayer driver) {
+        steeringPitch = false;
+        if (driver == null) {
+            return;
+        }
+        float targetPitch = Math.abs(driver.getXRot()) < LEVEL_LOOK ? 0 : Mth.clamp(driver.getXRot(), -MAX_PITCH, MAX_PITCH);
+        steeringPitch = targetPitch != 0;
+        float yaw = getYRot() + Mth.clamp(Mth.wrapDegrees(driver.getYRot() - getYRot()), -TURN_RATE, TURN_RATE);
         float pitch = getXRot();
-        if (inputUp) {
-            pitch -= PITCH_RATE;
+        if (steeringPitch || ship.isFloating() || drillInTerrain(level, shape)) {
+            pitch += Mth.clamp(targetPitch - getXRot(), -PITCH_RATE, PITCH_RATE);
         }
-        if (inputDown) {
-            pitch += PITCH_RATE;
-        }
-        pitch = Mth.clamp(pitch, -MAX_PITCH, MAX_PITCH);
         if (yaw == getYRot() && pitch == getXRot()) {
             return;
         }
@@ -412,17 +418,20 @@ public class DrillshipEntity extends ShipSectionEntity {
                 front = Math.max(front, Math.min(shape.drillFront, z + 0.5));
             }
         }
-        boolean drillInTerrain = false;
-        for (BlockPos pos : frame.blocksIn(shape.drillZone())) {
-            if (isSolid(level, pos)) {
-                drillInTerrain = true;
-                break;
-            }
-        }
+        boolean drillInTerrain = drillInTerrain(level, shape);
         if (front < back) {
             return drillInTerrain ? new Support(shape.drillFront, shape.drillFront, true) : null;
         }
         return new Support(back, front, drillInTerrain);
+    }
+
+    private boolean drillInTerrain(ServerLevel level, ShipShape shape) {
+        for (BlockPos pos : frame().blocksIn(shape.drillZone())) {
+            if (isSolid(level, pos)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void applyPhysics(ServerLevel level, ShipState ship, ShipShape shape) {
@@ -438,7 +447,7 @@ public class DrillshipEntity extends ShipSectionEntity {
             return;
         }
         fallSpeed = 0;
-        if (support.drillInTerrain() || inputUp || inputDown || Math.abs(getXRot()) < 1.0E-3F) {
+        if (support.drillInTerrain() || steeringPitch || Math.abs(getXRot()) < 1.0E-3F) {
             levelSpeed = 0;
             return;
         }
@@ -702,8 +711,8 @@ public class DrillshipEntity extends ShipSectionEntity {
         }
     }
 
-    // Passengers: the driver sits at the front on the drill's axis, looking through the periscope. The view turns and
-    // pitches with the ship, so the crosshair stays where the drill is heading.
+    // Passengers: the driver sits at the front on the drill's axis, looking through the periscope. The view doesn't
+    // turn with the ship: the driver looks around within limits, and the ship turns to follow (see rotate).
 
     @Override
     protected boolean canAddPassenger(Entity passenger) {
@@ -718,27 +727,23 @@ public class DrillshipEntity extends ShipSectionEntity {
         ShipShape shape = shape();
         Vec3 eye = frame().toWorld(0, shape.height * 0.5, shape.hullFront - DRIVER_EYE_SETBACK);
         callback.accept(passenger, eye.x, eye.y - passenger.getEyeHeight(), eye.z);
-        float turned = Mth.wrapDegrees(getYRot() - yRotO);
-        if (turned != 0) {
-            passenger.setYRot(passenger.getYRot() + turned);
-            passenger.setYHeadRot(passenger.getYHeadRot() + turned);
-        }
-        float pitched = getXRot() - xRotO;
-        if (pitched != 0) {
-            passenger.setXRot(Mth.clamp(passenger.getXRot() + pitched, -90.0F, 90.0F));
-        }
+        clampLook(passenger);
     }
 
     @Override
     public void onPassengerTurned(Entity passenger) {
-        if (!isMoving()) {
-            return;
-        }
+        clampLook(passenger);
+    }
+
+    private void clampLook(Entity passenger) {
         float offset = Mth.wrapDegrees(passenger.getYRot() - getYRot());
-        float clamped = Mth.clamp(offset, -DRIVER_LOOK_LIMIT, DRIVER_LOOK_LIMIT);
-        passenger.yRotO += clamped - offset;
-        passenger.setYRot(passenger.getYRot() + clamped - offset);
+        float yawCorrection = Mth.clamp(offset, -LOOK_YAW_LIMIT, LOOK_YAW_LIMIT) - offset;
+        passenger.yRotO += yawCorrection;
+        passenger.setYRot(passenger.getYRot() + yawCorrection);
         passenger.setYHeadRot(passenger.getYRot());
+        float pitchCorrection = Mth.clamp(passenger.getXRot(), -LOOK_PITCH_LIMIT, LOOK_PITCH_LIMIT) - passenger.getXRot();
+        passenger.xRotO += pitchCorrection;
+        passenger.setXRot(passenger.getXRot() + pitchCorrection);
     }
 
     @Override
