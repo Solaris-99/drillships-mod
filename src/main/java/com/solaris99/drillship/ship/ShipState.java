@@ -508,11 +508,6 @@ public class ShipState {
         return tier.inventorySlots() + ShipUpgrade.INVENTORY_SLOTS * effectiveUpgrades(ShipUpgrade.INVENTORY);
     }
 
-    /** What the inventory grows to with an inventory upgrade in every bay. */
-    public int maxInventorySlots() {
-        return tier.inventorySlots() + ShipUpgrade.INVENTORY_SLOTS * upgrades.getSlots();
-    }
-
     private void resizeInventory() {
         if (inventory.getSlots() != inventorySlots()) {
             inventory.resize(inventorySlots());

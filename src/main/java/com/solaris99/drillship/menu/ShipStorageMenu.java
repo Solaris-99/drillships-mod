@@ -23,7 +23,8 @@ import net.neoforged.neoforge.items.SlotItemHandler;
 
 /**
  * The ship's inventory, shown one page of 54 slots at a time. The page and the inventory's size, which changes with its
- * inventory upgrades, are synced to the client as data slots.
+ * inventory upgrades, are synced to the client as data slots. The client holds only the page on screen, slot for slot:
+ * a page's contents may arrive before its number, so they mustn't depend on it.
  */
 public class ShipStorageMenu extends AbstractContainerMenu {
     public static final int BUTTON_PREVIOUS = 0;
@@ -44,12 +45,13 @@ public class ShipStorageMenu extends AbstractContainerMenu {
         player.openMenu(new SimpleMenuProvider((id, inventory, p) -> new ShipStorageMenu(id, inventory, ship, fixture, ship.inventory()),
                 Component.translatable("container.drillships.storage")), buf -> {
                     buf.writeBlockPos(fixture);
-                    buf.writeVarInt(ship.maxInventorySlots());
+                    buf.writeVarInt(ship.inventory().getSlots());
                 });
     }
 
     public ShipStorageMenu(int id, Inventory inventory, RegistryFriendlyByteBuf buf) {
-        this(id, inventory, null, buf.readBlockPos(), new ItemStackHandler(buf.readVarInt()));
+        this(id, inventory, null, buf.readBlockPos(), new ItemStackHandler(PAGE_SIZE));
+        size.set(buf.readVarInt());
     }
 
     private ShipStorageMenu(int id, Inventory inventory, @Nullable ShipState ship, BlockPos fixture, IItemHandlerModifiable storage) {
@@ -139,9 +141,13 @@ public class ShipStorageMenu extends AbstractContainerMenu {
 
     /** The visible page of the ship's inventory. Slots past the end of the inventory are empty and inactive. */
     private class PageView implements IItemHandlerModifiable {
+        // On the client the storage is the page itself.
         int toStorage(int slot) {
             int index = page.get() * PAGE_SIZE + slot;
-            return index < size.get() ? index : -1;
+            if (index >= size.get()) {
+                return -1;
+            }
+            return ship == null ? slot : index;
         }
 
         @Override
