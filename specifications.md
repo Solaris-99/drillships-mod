@@ -566,7 +566,7 @@ Modules are full blocks facing into the room (set when installed): their texture
 
 **Item icons** (drawn in the mod, in each tier's colours where it has one): the tier parts (`textures/item/<tier>_wheel`, `_tread`, `_hull`, `_drill_piece`, `_drill_shaft`, `_engine`, `_drill`, `_drillship`, `_wagon`: copper and iron, bronze and brass, steel and diamond), every module and turret (the module base's copper frame with the module's symbol), and the ship locator (a brass dial whose needle turns through `ship_locator_00`..`31`, picked by the compass angle like vanilla's). The wrench, module base, upgrades and materials keep their placeholder icons for now.
 
-The alloy furnace and its module use `alloy_furnace_off` / `alloy_furnace_on` (the standalone block on its front, with vanilla's bricks on its sides and back and the furnace's top).
+The alloy furnace and its module use `alloy_furnace_off` / `alloy_furnace_on` (the standalone block on its front, with vanilla's bricks on every other face).
 
 **Materials** (placeholders drawn for now, one file each): `textures/item/<material>_ingot`, `<material>_nugget`, `raw_tin`, `raw_zinc`; `textures/block/<material>_block`, `raw_tin_block`, `raw_zinc_block`, and `tin_ore_overlay` / `zinc_ore_overlay`, the ore's spots, drawn over vanilla's stone or deepslate by the ore's model.
 

@@ -3,6 +3,6 @@
   "textures": {
     "front": "drillships:block/alloy_furnace_on",
     "side": "minecraft:block/bricks",
-    "top": "minecraft:block/furnace_top"
+    "top": "minecraft:block/bricks"
   }
 }
