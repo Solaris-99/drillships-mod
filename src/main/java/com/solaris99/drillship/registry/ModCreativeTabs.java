@@ -18,14 +18,17 @@ public final class ModCreativeTabs {
             .withTabsBefore(CreativeModeTabs.SPAWN_EGGS)
             .icon(() -> ModItems.BASIC_DRILLSHIP.get().getDefaultInstance())
             .displayItems((parameters, output) -> {
-                // One row per tier, then the modules.
+                // One row per tier, then the upgrades.
                 for (String tier : new String[] {"basic", "standard", "hardened"}) {
                     for (String part : new String[] {"drillship", "wagon", "drill", "engine", "hull", "tread", "wheel", "drill_piece", "drill_shaft"}) {
                         output.accept(BuiltInRegistries.ITEM.get(Drillships.id(tier + "_" + part)));
                     }
                 }
-                output.accept(ModItems.RADAR_MODULE.get());
-                output.accept(ModItems.RADIO_MODULE.get());
+                output.accept(ModItems.RADAR_UPGRADE.get());
+                output.accept(ModItems.RADIO_UPGRADE.get());
+                output.accept(ModItems.ENGINE_OVERDRIVE_UPGRADE.get());
+                output.accept(ModItems.ANTIGRAVITY_UPGRADE.get());
+                output.accept(ModItems.INVENTORY_UPGRADE.get());
             }).build());
 
     private ModCreativeTabs() {

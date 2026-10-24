@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "SES",
+    "MRM",
+    "CNC"
+  ],
+  "key": {
+    "S": { "item": "minecraft:shulker_shell" },
+    "E": { "item": "minecraft:ender_eye" },
+    "M": { "item": "minecraft:phantom_membrane" },
+    "R": { "tag": "c:storage_blocks/redstone" },
+    "C": { "tag": "c:ingots/copper" },
+    "N": { "item": "minecraft:netherite_scrap" }
+  },
+  "result": { "id": "drillships:antigravity_upgrade", "count": 1 }
+}

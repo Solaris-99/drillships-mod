@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "CHC",
+    "HBH",
+    "CHC"
+  ],
+  "key": {
+    "C": { "tag": "c:ingots/copper" },
+    "H": { "tag": "c:chests/wooden" },
+    "B": { "tag": "c:barrels/wooden" }
+  },
+  "result": { "id": "drillships:inventory_upgrade", "count": 1 }
+}

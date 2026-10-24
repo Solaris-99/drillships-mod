@@ -361,10 +361,10 @@ public final class SectionModel {
      * @param lightsOn   headlights lit
      * @param beaconOn   warning beacon lit (blinking is up to the caller)
      */
-    public static MeshBuilder buildMoving(Spec spec, float travel, float doorOpen, boolean lightsOn, boolean beaconOn, int modules) {
+    public static MeshBuilder buildMoving(Spec spec, float travel, float doorOpen, boolean lightsOn, boolean beaconOn, int upgrades) {
         MeshBuilder mesh = new MeshBuilder();
         if (spec.drillhead()) {
-            modules(mesh, spec, modules);
+            upgrades(mesh, spec, upgrades);
         }
         for (int side = -1; side <= 1; side += 2) {
             belt(mesh, spec, side, travel);
@@ -384,25 +384,25 @@ public final class SectionModel {
         return mesh;
     }
 
-    // Installed modules show outside (bits as ShipModule's): the radar's sonar pod under the nose and its search coil
+    // Installed upgrades show outside (bits as ShipUpgrade's): the radar's sonar pod under the nose and its search coil
     // under the tail, the radio's antenna on the roof.
     private static final int RADAR_BIT = 1;
     private static final int RADIO_BIT = 2;
 
-    private static void modules(MeshBuilder mesh, Spec spec, int modules) {
-        if ((modules & RADAR_BIT) != 0) {
+    private static void upgrades(MeshBuilder mesh, Spec spec, int upgrades) {
+        if ((upgrades & RADAR_BIT) != 0) {
             float z1 = spec.bodyFront() - 0.6F, z0 = z1 - 1.0F;
             mesh.box(TRIM, -0.45F, 0.05F, z0, 0.45F, BELLY_BOTTOM, z1, "NSEW");
             mesh.fit(true).box(GLASS, -0.45F, 0.05F, z0, 0.45F, BELLY_BOTTOM, z1, "D").fit(false);
         }
-        if ((modules & RADAR_BIT) != 0) {
+        if ((upgrades & RADAR_BIT) != 0) {
             float z = spec.back() + spec.taper() + 0.9F, y = 0.08F;
             mesh.with(Affine.rotate(new float[] {1, 0, 0}, (float) (-Math.PI / 2), new float[] {0, y, z}),
                     () -> mesh.cylinder(HAZARD, TRIM, 0, y, 0.45F, z, z + 0.06F, 12, true, false));
             mesh.box(TRIM, -0.04F, y + 0.06F, z - 0.04F, 0.04F, BELLY_BOTTOM, z + 0.04F, "NSEW");
         }
         // The tunnel leaves no room for a mast, so the whip antenna lies folded back along the roof, tied to a clip.
-        if ((modules & RADIO_BIT) != 0) {
+        if ((upgrades & RADIO_BIT) != 0) {
             float x = spec.bodyHalfWidth() - BEVEL - 0.35F, y = spec.roof(), z0 = spec.bodyFront() - 1.6F;
             float z1 = Math.max(spec.back() + spec.taper() + 0.3F, z0 - 3.0F), rod = spec.height - 0.12F;
             mesh.box(TRIM, x - 0.12F, y, z0 - 0.12F, x + 0.12F, rod, z0 + 0.12F, "NSEWU");

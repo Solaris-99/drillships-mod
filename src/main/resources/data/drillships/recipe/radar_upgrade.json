@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "CKC",
+    "GRG",
+    "CPC"
+  ],
+  "key": {
+    "C": { "tag": "c:ingots/copper" },
+    "K": { "item": "minecraft:compass" },
+    "G": { "tag": "c:glass_panes" },
+    "R": { "tag": "c:dusts/redstone" },
+    "P": { "item": "minecraft:prismarine_shard" }
+  },
+  "result": { "id": "drillships:radar_upgrade", "count": 1 }
+}

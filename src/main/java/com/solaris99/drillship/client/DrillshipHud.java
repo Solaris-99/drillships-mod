@@ -16,7 +16,7 @@ import net.minecraft.util.Mth;
 
 /**
  * The driver's HUD, styled like an old military terminal: green monospace text on dark panels with scanlines. Shows the
- * ship's attitude, drill, power and warnings, and the radar (RadarHud) when the ship has radar modules. Readouts come from {@link ModNetwork.ShipStatus}; attitude comes straight
+ * ship's attitude, drill, power and warnings, and the radar (RadarHud) when the ship has radar upgrades. Readouts come from {@link ModNetwork.ShipStatus}; attitude comes straight
  * from the interpolated entity so it moves smoothly.
  */
 public final class DrillshipHud {

@@ -167,7 +167,7 @@ public record InteriorLayout(ShipTier tier, BlockPos origin) {
      * and the storage access on the walls;</li>
      * <li>standard: a glazed bulkhead across the cabin behind the chair, with a three-wide opening under a header;</li>
      * <li>hardened: the cabin is too wide to wall off whole, so the cockpit is a three-wide glazed pod with a roof and
-     * its own lamp, leaving a bay on either side: the generator's on the right, the module panels' on the left.</li>
+     * its own lamp, leaving a bay on either side: the generator's on the right, the upgrade panels' on the left.</li>
      * </ul>
      */
     public List<CockpitPart> cockpit() {
@@ -225,10 +225,10 @@ public record InteriorLayout(ShipTier tier, BlockPos origin) {
         return new CockpitPart(origin.offset(x, y, z), kind, facing);
     }
 
-    /** Module panels in the left wall at eye level, from the front back: beside the cockpit, within the driver's reach. */
-    public List<BlockPos> modulePanels() {
+    /** Upgrade panels in the left wall at eye level, from the front back: beside the cockpit, within the driver's reach. */
+    public List<BlockPos> upgradePanels() {
         List<BlockPos> panels = new ArrayList<>();
-        for (int i = 0; i < tier.modulePanels(); i++) {
+        for (int i = 0; i < tier.upgradePanels(); i++) {
             panels.add(origin.offset(sizeX() - 1, 2, sizeZ() - 2 - i));
         }
         return panels;
@@ -254,7 +254,7 @@ public record InteriorLayout(ShipTier tier, BlockPos origin) {
         return origin.offset(0, 2, sizeZ() - 3);
     }
 
-    // Max-X wall: crafting table and storage access at the back, facing the door; the module panels at the front.
+    // Max-X wall: crafting table and storage access at the back, facing the door; the upgrade panels at the front.
     public BlockPos storage() {
         return origin.offset(sizeX() - 1, 2, 3);
     }

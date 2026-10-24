@@ -3,9 +3,9 @@ package com.solaris99.drillship.registry;
 import com.solaris99.drillship.Drillships;
 import com.solaris99.drillship.block.CockpitBlock;
 import com.solaris99.drillship.block.HullPanelBlock;
-import com.solaris99.drillship.block.ModulePanelBlock;
 import com.solaris99.drillship.block.ShipDoorBlock;
 import com.solaris99.drillship.block.ShipInteriorBlock;
+import com.solaris99.drillship.block.UpgradePanelBlock;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -45,9 +45,13 @@ public final class ModBlocks {
     public static final DeferredBlock<ShipInteriorBlock> SHIP_CRAFTING = builtIn("ship_crafting", ShipInteriorBlock.Function.CRAFTING, interior());
     public static final DeferredBlock<ShipDoorBlock> SHIP_DOOR = BLOCKS.register("ship_door", () -> new ShipDoorBlock(interior()));
 
-    // Module panels in the drillhead's left wall, one per tier, four modules each.
-    public static final DeferredBlock<ModulePanelBlock> MODULE_PANEL = BLOCKS.register("module_panel",
-            () -> new ModulePanelBlock(interior().lightLevel(state -> state.getValue(ModulePanelBlock.STATION) > 0 ? 6 : 3)));
+    // Upgrade panels in the drillhead's left wall, one per tier, four upgrades each.
+    public static final DeferredBlock<UpgradePanelBlock> UPGRADE_PANEL = BLOCKS.register("upgrade_panel",
+            () -> new UpgradePanelBlock(interior().lightLevel(state -> state.getValue(UpgradePanelBlock.STATION) > 0 ? 6 : 3)));
+
+    static {
+        BLOCKS.addAlias(Drillships.id("module_panel"), Drillships.id("upgrade_panel"));
+    }
 
     // The cockpit (see InteriorLayout.cockpit): the driver's chair, the desk across the front, the consoles beside the
     // chair, screens on the front wall, and the glazed bulkhead that sets it apart from the rest of the cabin.

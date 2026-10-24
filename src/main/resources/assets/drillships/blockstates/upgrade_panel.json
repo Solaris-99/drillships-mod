@@ -1,0 +1,29 @@
+{
+  "multipart": [
+    { "apply": { "model": "drillships:block/upgrade_panel" } },
+    { "when": { "bay0": "radar" }, "apply": { "model": "drillships:block/upgrade_panel_bay0_radar" } },
+    { "when": { "bay0": "radio", "station": "0" }, "apply": { "model": "drillships:block/upgrade_panel_bay0_radio" } },
+    { "when": { "bay0": "radio", "station": "1|2|3|4|5|6" }, "apply": { "model": "drillships:block/upgrade_panel_bay0_radio_on" } },
+    { "when": { "bay0": "engine_overdrive" }, "apply": { "model": "drillships:block/upgrade_panel_bay0_engine_overdrive" } },
+    { "when": { "bay0": "antigravity" }, "apply": { "model": "drillships:block/upgrade_panel_bay0_antigravity" } },
+    { "when": { "bay0": "inventory" }, "apply": { "model": "drillships:block/upgrade_panel_bay0_inventory" } },
+    { "when": { "bay1": "radar" }, "apply": { "model": "drillships:block/upgrade_panel_bay1_radar" } },
+    { "when": { "bay1": "radio", "station": "0" }, "apply": { "model": "drillships:block/upgrade_panel_bay1_radio" } },
+    { "when": { "bay1": "radio", "station": "1|2|3|4|5|6" }, "apply": { "model": "drillships:block/upgrade_panel_bay1_radio_on" } },
+    { "when": { "bay1": "engine_overdrive" }, "apply": { "model": "drillships:block/upgrade_panel_bay1_engine_overdrive" } },
+    { "when": { "bay1": "antigravity" }, "apply": { "model": "drillships:block/upgrade_panel_bay1_antigravity" } },
+    { "when": { "bay1": "inventory" }, "apply": { "model": "drillships:block/upgrade_panel_bay1_inventory" } },
+    { "when": { "bay2": "radar" }, "apply": { "model": "drillships:block/upgrade_panel_bay2_radar" } },
+    { "when": { "bay2": "radio", "station": "0" }, "apply": { "model": "drillships:block/upgrade_panel_bay2_radio" } },
+    { "when": { "bay2": "radio", "station": "1|2|3|4|5|6" }, "apply": { "model": "drillships:block/upgrade_panel_bay2_radio_on" } },
+    { "when": { "bay2": "engine_overdrive" }, "apply": { "model": "drillships:block/upgrade_panel_bay2_engine_overdrive" } },
+    { "when": { "bay2": "antigravity" }, "apply": { "model": "drillships:block/upgrade_panel_bay2_antigravity" } },
+    { "when": { "bay2": "inventory" }, "apply": { "model": "drillships:block/upgrade_panel_bay2_inventory" } },
+    { "when": { "bay3": "radar" }, "apply": { "model": "drillships:block/upgrade_panel_bay3_radar" } },
+    { "when": { "bay3": "radio", "station": "0" }, "apply": { "model": "drillships:block/upgrade_panel_bay3_radio" } },
+    { "when": { "bay3": "radio", "station": "1|2|3|4|5|6" }, "apply": { "model": "drillships:block/upgrade_panel_bay3_radio_on" } },
+    { "when": { "bay3": "engine_overdrive" }, "apply": { "model": "drillships:block/upgrade_panel_bay3_engine_overdrive" } },
+    { "when": { "bay3": "antigravity" }, "apply": { "model": "drillships:block/upgrade_panel_bay3_antigravity" } },
+    { "when": { "bay3": "inventory" }, "apply": { "model": "drillships:block/upgrade_panel_bay3_inventory" } }
+  ]
+}

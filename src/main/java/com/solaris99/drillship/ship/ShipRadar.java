@@ -29,7 +29,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * The ship's radar, shown to the driver as a compass line on the HUD: the nearest deposits of the ore it is set to
- * look for (RadarOre), with their height. One radar, cumulative: each radar module installed raises its tier, up to
+ * look for (RadarOre), with their height. One radar, cumulative: each radar upgrade installed raises its tier, up to
  * {@link #MAX_TIER}.
  * <ul>
  * <li>tier 1: metals, within 24 blocks, with whether they lie above or below;</li>
@@ -78,7 +78,7 @@ public final class ShipRadar {
     private BlockPos findsCenter = BlockPos.ZERO;
     private RadarOre findsTarget = RadarOre.IRON;
 
-    /** The radar's tier with this many radar modules. */
+    /** The radar's tier with this many radar upgrades. */
     public static int tier(int radars) {
         return Math.min(MAX_TIER, radars);
     }

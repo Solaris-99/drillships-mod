@@ -3,10 +3,10 @@ package com.solaris99.drillship.registry;
 import com.solaris99.drillship.Drillships;
 import com.solaris99.drillship.item.DrillItem;
 import com.solaris99.drillship.item.DrillshipItem;
-import com.solaris99.drillship.item.ModuleItem;
+import com.solaris99.drillship.item.UpgradeItem;
 import com.solaris99.drillship.item.WagonItem;
-import com.solaris99.drillship.ship.ShipModule;
 import com.solaris99.drillship.ship.ShipTier;
+import com.solaris99.drillship.ship.ShipUpgrade;
 
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -61,14 +61,32 @@ public final class ModItems {
     public static final DeferredItem<WagonItem> HARDENED_WAGON = ITEMS.register("hardened_wagon",
             () -> new WagonItem(ShipTier.HARDENED, new Item.Properties()));
 
-    // Modules for the module panels.
-    public static final DeferredItem<ModuleItem> RADAR_MODULE = ITEMS.register("radar_module",
-            () -> new ModuleItem(ShipModule.RADAR, new Item.Properties().stacksTo(16)));
-    public static final DeferredItem<ModuleItem> RADIO_MODULE = ITEMS.register("radio_module",
-            () -> new ModuleItem(ShipModule.RADIO, new Item.Properties().stacksTo(16)));
+    // Upgrades for the upgrade panels.
+    public static final DeferredItem<UpgradeItem> RADAR_UPGRADE = ITEMS.register("radar_upgrade",
+            () -> new UpgradeItem(ShipUpgrade.RADAR, new Item.Properties().stacksTo(16)));
+    public static final DeferredItem<UpgradeItem> RADIO_UPGRADE = ITEMS.register("radio_upgrade",
+            () -> new UpgradeItem(ShipUpgrade.RADIO, new Item.Properties().stacksTo(16)));
+    public static final DeferredItem<UpgradeItem> ENGINE_OVERDRIVE_UPGRADE = ITEMS.register("engine_overdrive_upgrade",
+            () -> new UpgradeItem(ShipUpgrade.ENGINE_OVERDRIVE, new Item.Properties().stacksTo(16)));
+    public static final DeferredItem<UpgradeItem> ANTIGRAVITY_UPGRADE = ITEMS.register("antigravity_upgrade",
+            () -> new UpgradeItem(ShipUpgrade.ANTIGRAVITY, new Item.Properties().stacksTo(16)));
+    public static final DeferredItem<UpgradeItem> INVENTORY_UPGRADE = ITEMS.register("inventory_upgrade",
+            () -> new UpgradeItem(ShipUpgrade.INVENTORY, new Item.Properties().stacksTo(16)));
 
-    public static ItemStack module(ShipModule module) {
-        return new ItemStack(module == ShipModule.RADAR ? RADAR_MODULE.get() : RADIO_MODULE.get());
+    // Upgrades used to be called modules.
+    static {
+        ITEMS.addAlias(Drillships.id("radar_module"), Drillships.id("radar_upgrade"));
+        ITEMS.addAlias(Drillships.id("radio_module"), Drillships.id("radio_upgrade"));
+    }
+
+    public static ItemStack upgrade(ShipUpgrade upgrade) {
+        return new ItemStack(switch (upgrade) {
+            case RADAR -> RADAR_UPGRADE.get();
+            case RADIO -> RADIO_UPGRADE.get();
+            case ENGINE_OVERDRIVE -> ENGINE_OVERDRIVE_UPGRADE.get();
+            case ANTIGRAVITY -> ANTIGRAVITY_UPGRADE.get();
+            case INVENTORY -> INVENTORY_UPGRADE.get();
+        });
     }
 
     public static ItemStack newDrill(ShipTier tier) {

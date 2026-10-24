@@ -1,7 +1,8 @@
 package com.solaris99.drillship.gametest;
 
+import com.solaris99.drillship.Config;
 import com.solaris99.drillship.Drillships;
-import com.solaris99.drillship.block.ModulePanelBlock;
+import com.solaris99.drillship.block.UpgradePanelBlock;
 import com.solaris99.drillship.entity.DrillshipEntity;
 import com.solaris99.drillship.entity.WagonEntity;
 import com.solaris99.drillship.item.DrillshipItem;
@@ -13,11 +14,11 @@ import com.solaris99.drillship.registry.ModKeys;
 import com.solaris99.drillship.ship.InteriorLayout;
 import com.solaris99.drillship.ship.RadarOre;
 import com.solaris99.drillship.ship.ShipManager;
-import com.solaris99.drillship.ship.ShipModule;
 import com.solaris99.drillship.ship.ShipRadar;
 import com.solaris99.drillship.ship.ShipState;
 import com.solaris99.drillship.ship.ShipTier;
 import com.solaris99.drillship.ship.ShipTravel;
+import com.solaris99.drillship.ship.ShipUpgrade;
 import com.solaris99.drillship.ship.ShipWagons;
 
 import net.minecraft.core.BlockPos;
@@ -157,9 +158,9 @@ public class DrillshipTests {
         for (InteriorLayout.CockpitPart part : layout.cockpit()) {
             helper.assertTrue(ModBlocks.isBuiltIn(interior.getBlockState(part.pos())), "Cockpit part missing at " + part.pos());
         }
-        helper.assertTrue(layout.modulePanels().size() == ShipTier.BASIC.modulePanels(), "The basic drillhead has one module panel");
-        for (BlockPos panel : layout.modulePanels()) {
-            assertBlock(helper, interior, panel, ModBlocks.MODULE_PANEL.get());
+        helper.assertTrue(layout.upgradePanels().size() == ShipTier.BASIC.upgradePanels(), "The basic drillhead has one upgrade panel");
+        for (BlockPos panel : layout.upgradePanels()) {
+            assertBlock(helper, interior, panel, ModBlocks.UPGRADE_PANEL.get());
         }
         helper.assertTrue(interior.getBlockState(BlockPos.containing(layout.entryPoint())).isAir(), "Entry point should be free");
         helper.assertTrue(interior.getBlockState(BlockPos.containing(layout.helmPoint())).isAir(), "Where the driver gets up should be free");
@@ -168,37 +169,119 @@ public class DrillshipTests {
     }
 
     @GameTest(template = TEMPLATE)
-    public static void radarModulesAddUp(GameTestHelper helper) {
+    public static void radarUpgradesAddUp(GameTestHelper helper) {
         floor(helper);
         ShipState ship = place(helper, ORIGIN);
-        IItemHandlerModifiable modules = ship.modules();
-        helper.assertTrue(modules.getSlots() == ShipState.MODULES_PER_PANEL, "One panel of four bays");
-        helper.assertTrue(!modules.isItemValid(0, new ItemStack(Items.COAL)), "Only modules go into a panel");
-        modules.setStackInSlot(0, ModItems.module(ShipModule.RADAR));
-        helper.assertTrue(ship.radarTier() == 1, "One radar module: tier 1");
+        IItemHandlerModifiable upgrades = ship.upgrades();
+        helper.assertTrue(upgrades.getSlots() == ShipState.UPGRADES_PER_PANEL, "One panel of four bays");
+        helper.assertTrue(!upgrades.isItemValid(0, new ItemStack(Items.COAL)), "Only upgrades go into a panel");
+        upgrades.setStackInSlot(0, ModItems.upgrade(ShipUpgrade.RADAR));
+        helper.assertTrue(ship.radarTier() == 1, "One radar upgrade: tier 1");
         ship.cycleRadarTarget(-1);
         helper.assertTrue(ship.radarTarget() == RadarOre.OTHER_METAL, "Tier 1 cycles through metals only");
-        modules.setStackInSlot(1, ModItems.module(ShipModule.RADAR));
-        modules.setStackInSlot(3, ModItems.module(ShipModule.RADIO));
-        helper.assertTrue(ship.moduleCount(ShipModule.RADAR) == 2 && ship.radarTier() == 2, "Two radar modules: tier 2");
+        upgrades.setStackInSlot(1, ModItems.upgrade(ShipUpgrade.RADAR));
+        upgrades.setStackInSlot(3, ModItems.upgrade(ShipUpgrade.RADIO));
+        helper.assertTrue(ship.upgradeCount(ShipUpgrade.RADAR) == 2 && ship.radarTier() == 2, "Two radar upgrades: tier 2");
         ship.cycleRadarTarget(1);
         helper.assertTrue(ship.radarTarget() == RadarOre.COAL, "Tier 2 finds every ore");
-        modules.setStackInSlot(1, ItemStack.EMPTY);
+        upgrades.setStackInSlot(1, ItemStack.EMPTY);
         helper.assertTrue(ship.radarTarget() == RadarOre.IRON, "Back at tier 1, an ore it can't find falls back to iron");
-        modules.setStackInSlot(1, ModItems.module(ShipModule.RADAR));
+        upgrades.setStackInSlot(1, ModItems.upgrade(ShipUpgrade.RADAR));
         helper.assertTrue(ShipRadar.tier(5) == ShipRadar.MAX_TIER, "The tier stops at 3");
         helper.assertTrue(ShipRadar.oreRange(3) > ShipRadar.oreRange(2) && ShipRadar.oreRange(2) > ShipRadar.oreRange(1), "Each tier reaches further");
         ship.setRadioStation(1);
         helper.assertTrue(ship.radioStation() == 1, "The radio tunes");
-        modules.setStackInSlot(3, ItemStack.EMPTY);
+        upgrades.setStackInSlot(3, ItemStack.EMPTY);
         helper.assertTrue(ship.radioStation() == 0, "Taking the radio out switches it off");
         helper.succeedWhen(() -> {
-            helper.assertTrue(entity(helper, ship).modules() == ShipModule.RADAR.bit(), "The exterior shows the radar");
+            helper.assertTrue(entity(helper, ship).upgrades() == ShipUpgrade.RADAR.bit(), "The exterior shows the radar");
             ServerLevel interior = helper.getLevel().getServer().getLevel(ModKeys.INTERIOR);
-            BlockState panel = interior.getBlockState(ship.layout().modulePanels().get(0));
-            helper.assertTrue(panel.getValue(ModulePanelBlock.BAYS.get(1)) == ModulePanelBlock.Bay.RADAR, "The panel shows its modules");
+            BlockState panel = interior.getBlockState(ship.layout().upgradePanels().get(0));
+            helper.assertTrue(panel.getValue(UpgradePanelBlock.BAYS.get(1)) == UpgradePanelBlock.Bay.RADAR, "The panel shows its upgrades");
             remove(helper, ship);
         });
+    }
+
+    @GameTest(template = TEMPLATE)
+    public static void engineOverdrivesStackUpToThree(GameTestHelper helper) {
+        floor(helper);
+        ShipState ship = place(helper, ORIGIN);
+        double base = ShipTier.BASIC.topSpeed();
+        for (int bay = 0; bay < ShipState.UPGRADES_PER_PANEL; bay++) {
+            ship.upgrades().setStackInSlot(bay, ModItems.upgrade(ShipUpgrade.ENGINE_OVERDRIVE));
+        }
+        helper.assertTrue(ship.topSpeed() == base * 2.5, "Three overdrives give 250% top speed, and a fourth changes nothing");
+        helper.assertTrue(Math.abs(ship.accelerationFactor() - 1.3) < 1.0E-9, "Three overdrives give 130% acceleration");
+        helper.assertTrue(ship.moveEnergy() == Config.MOVE_ENERGY.get() + 30, "Each overdrive adds 10 FE/t to moving");
+        ship.upgrades().setStackInSlot(3, ItemStack.EMPTY);
+        ship.upgrades().setStackInSlot(2, ItemStack.EMPTY);
+        helper.assertTrue(ship.topSpeed() == base * 2.0 && ship.moveEnergy() == Config.MOVE_ENERGY.get() + 20, "Two overdrives: 200%, +20 FE/t");
+        ship.upgrades().setStackInSlot(2, ModItems.upgrade(ShipUpgrade.ENGINE_OVERDRIVE));
+        drive(helper, ship);
+        helper.runAfterDelay(25, () -> {
+            helper.assertTrue(ship.speed() > base + 1, "An overdriven ship outruns the tier's top speed, but went " + ship.speed());
+            remove(helper, ship);
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = TEMPLATE)
+    public static void antigravityHoldsTheShipUp(GameTestHelper helper) {
+        floor(helper);
+        Vec3 aloft = ORIGIN.add(0, 3, 0);
+        ShipState ship = place(helper, aloft);
+        ship.upgrades().setStackInSlot(0, ModItems.upgrade(ShipUpgrade.ANTIGRAVITY));
+        ship.upgrades().setStackInSlot(1, ModItems.upgrade(ShipUpgrade.ANTIGRAVITY));
+        helper.runAfterDelay(20, () -> {
+            helper.assertTrue(ship.isFloating(), "A powered antigravity engine turns gravity off");
+            helper.assertTrue(Math.abs(relative(helper, entity(helper, ship).position()).y - aloft.y) < 1.0E-3, "The ship should hover where it was");
+            // The generator makes 240 FE/t and only one of the two engines draws its 200 FE/t.
+            int perTick = ShipTier.BASIC.generation() - ShipUpgrade.ANTIGRAVITY_ENERGY;
+            helper.assertTrue(ship.energy() > 0 && ship.energy() % perTick == 0, "One engine draws 200 FE/t, but energy is " + ship.energy());
+            ship.upgrades().setStackInSlot(0, ItemStack.EMPTY);
+            ship.upgrades().setStackInSlot(1, ItemStack.EMPTY);
+            helper.succeedWhen(() -> {
+                helper.assertTrue(Math.abs(relative(helper, entity(helper, ship).position()).y - ORIGIN.y) < 1.0E-3, "Without the engine the ship falls");
+                remove(helper, ship);
+            });
+        });
+    }
+
+    @GameTest(template = TEMPLATE)
+    public static void antigravityWithoutEnergyFalls(GameTestHelper helper) {
+        floor(helper);
+        ShipState ship = place(helper, ORIGIN.add(0, 3, 0));
+        ship.fuelSlot().setStackInSlot(0, ItemStack.EMPTY);
+        ship.upgrades().setStackInSlot(0, ModItems.upgrade(ShipUpgrade.ANTIGRAVITY));
+        helper.succeedWhen(() -> {
+            helper.assertTrue(!ship.isFloating(), "An antigravity engine without energy doesn't hold the ship up");
+            helper.assertTrue(Math.abs(relative(helper, entity(helper, ship).position()).y - ORIGIN.y) < 1.0E-3, "The ship should land on the floor");
+            remove(helper, ship);
+        });
+    }
+
+    @GameTest(template = TEMPLATE)
+    public static void inventoryUpgradesAddSlots(GameTestHelper helper) {
+        floor(helper);
+        ShipState ship = place(helper, ORIGIN);
+        IItemHandlerModifiable upgrades = ship.upgrades();
+        IItemHandlerModifiable inventory = ship.inventory();
+        int base = ShipTier.BASIC.inventorySlots(), added = ShipUpgrade.INVENTORY_SLOTS;
+        inventory.setStackInSlot(base - 1, new ItemStack(Items.COBBLESTONE));
+        upgrades.setStackInSlot(0, ModItems.upgrade(ShipUpgrade.INVENTORY));
+        upgrades.setStackInSlot(1, ModItems.upgrade(ShipUpgrade.INVENTORY));
+        helper.assertTrue(inventory.getSlots() == base + 2 * added, "Each inventory upgrade adds 50 slots");
+        helper.assertTrue(inventory.getStackInSlot(base - 1).is(Items.COBBLESTONE), "Growing keeps what the inventory holds");
+        inventory.setStackInSlot(base + added, new ItemStack(Items.DIRT));
+        helper.assertTrue(upgrades.extractItem(0, 1, true).isEmpty() && upgrades.extractItem(1, 1, true).isEmpty(),
+                "No inventory upgrade comes out while the last 50 slots hold items");
+        inventory.setStackInSlot(base + added, ItemStack.EMPTY);
+        inventory.setStackInSlot(base, new ItemStack(Items.DIRT));
+        helper.assertTrue(!upgrades.extractItem(1, 1, false).isEmpty(), "One comes out once the last 50 slots are empty");
+        helper.assertTrue(inventory.getSlots() == base + added && inventory.getStackInSlot(base).is(Items.DIRT), "Shrinking keeps the slots left");
+        helper.assertTrue(upgrades.extractItem(0, 1, true).isEmpty(), "The other one holds items now");
+        remove(helper, ship);
+        helper.succeed();
     }
 
     @GameTest(template = TEMPLATE)
@@ -217,7 +300,7 @@ public class DrillshipTests {
         floor(helper);
         ShipState ship = place(helper, ORIGIN);
         ship.fuelSlot().setStackInSlot(0, ItemStack.EMPTY);
-        ship.modules().setStackInSlot(2, ModItems.module(ShipModule.RADAR));
+        ship.upgrades().setStackInSlot(2, ModItems.upgrade(ShipUpgrade.RADAR));
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
         ShipTravel.enterShip(player, ship);
         ShipTravel.pickUp(player, ship);
@@ -229,10 +312,10 @@ public class DrillshipTests {
             if (player.getInventory().getItem(i).is(ModItems.BASIC_DRILLSHIP.get())) {
                 item = player.getInventory().getItem(i);
             }
-            radar |= player.getInventory().getItem(i).is(ModItems.RADAR_MODULE.get());
+            radar |= player.getInventory().getItem(i).is(ModItems.RADAR_UPGRADE.get());
         }
         helper.assertTrue(!item.isEmpty(), "Player should get the drillship item back");
-        helper.assertTrue(radar, "Player should get the modules back");
+        helper.assertTrue(radar, "Player should get the upgrades back");
         helper.assertTrue(item.get(ModComponents.INSTALLED_DRILL.get()).copyOne().is(ModItems.BASIC_DRILL.get()), "The drill should be stored in the item");
         helper.succeed();
     }

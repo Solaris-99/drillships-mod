@@ -93,8 +93,8 @@ public enum ShipTier {
         return coupling;
     }
 
-    /** Module panels on the drillhead's left wall, one more per tier, each holding four modules. */
-    public int modulePanels() {
+    /** Upgrade panels on the drillhead's left wall, one more per tier, each holding four upgrades. */
+    public int upgradePanels() {
         return ordinal() + 1;
     }
 

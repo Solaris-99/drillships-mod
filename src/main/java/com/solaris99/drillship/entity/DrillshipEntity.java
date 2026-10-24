@@ -69,7 +69,7 @@ public class DrillshipEntity extends ShipSectionEntity {
     private static final EntityDataAccessor<Boolean> DATA_WARNING = SynchedEntityData.defineId(DrillshipEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> DATA_BURNING = SynchedEntityData.defineId(DrillshipEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> DATA_CUTTING = SynchedEntityData.defineId(DrillshipEntity.class, EntityDataSerializers.BOOLEAN);
-    private static final EntityDataAccessor<Integer> DATA_MODULES = SynchedEntityData.defineId(DrillshipEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> DATA_UPGRADES = SynchedEntityData.defineId(DrillshipEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> DATA_RADIO = SynchedEntityData.defineId(DrillshipEntity.class, EntityDataSerializers.INT);
 
     private static final double ACCELERATION = 0.02;
@@ -150,7 +150,7 @@ public class DrillshipEntity extends ShipSectionEntity {
         builder.define(DATA_WARNING, false);
         builder.define(DATA_BURNING, false);
         builder.define(DATA_CUTTING, false);
-        builder.define(DATA_MODULES, 0);
+        builder.define(DATA_UPGRADES, 0);
         builder.define(DATA_RADIO, 0);
     }
 
@@ -197,9 +197,9 @@ public class DrillshipEntity extends ShipSectionEntity {
         return entityData.get(DATA_CUTTING);
     }
 
-    /** Installed modules, as ShipModule bits: they show on the exterior. */
-    public int modules() {
-        return entityData.get(DATA_MODULES);
+    /** Installed upgrades, as ShipUpgrade bits: they show on the exterior. */
+    public int upgrades() {
+        return entityData.get(DATA_UPGRADES);
     }
 
     /** The radio's station (RadioStation ordinal), 0 for off: the exterior plays it too. */
@@ -290,7 +290,7 @@ public class DrillshipEntity extends ShipSectionEntity {
         entityData.set(DATA_WARNING, ship.warnings(level.getGameTime()) != 0);
         entityData.set(DATA_BURNING, ship.isBurning());
         entityData.set(DATA_CUTTING, cutting);
-        entityData.set(DATA_MODULES, ship.moduleMask());
+        entityData.set(DATA_UPGRADES, ship.upgradeMask());
         entityData.set(DATA_RADIO, ship.radioStation());
         ship.updatePose(level.dimension(), position(), getYRot(), getXRot(), displacement.length() * 20.0);
 
@@ -304,15 +304,16 @@ public class DrillshipEntity extends ShipSectionEntity {
     }
 
     private void updateSpeed(ShipState ship) {
-        double max = ship.tier().topSpeed() / 20.0;
+        double max = ship.topSpeed() / 20.0;
+        double acceleration = ACCELERATION * ship.accelerationFactor();
         if (inputForward > 0) {
-            speed = Math.min(max, speed + ACCELERATION);
+            speed = Math.min(max, speed + acceleration);
         } else if (inputForward < 0) {
-            speed = Math.max(-max * REVERSE_FACTOR, speed - ACCELERATION);
+            speed = Math.max(-max * REVERSE_FACTOR, speed - acceleration);
         } else {
-            speed = Math.signum(speed) * Math.max(0, Math.abs(speed) - ACCELERATION);
+            speed = Math.signum(speed) * Math.max(0, Math.abs(speed) - acceleration);
         }
-        if (speed != 0 && !ship.consumeEnergy(Config.MOVE_ENERGY.get())) {
+        if (speed != 0 && !ship.consumeEnergy(ship.moveEnergy())) {
             speed = 0;
         }
     }
@@ -393,7 +394,8 @@ public class DrillshipEntity extends ShipSectionEntity {
     // Physics. What holds the ship up is whatever is under its tracks, or its drill biting into terrain; with nothing
     // at all it falls. Out in the open (the drill biting into nothing) and left alone by the driver, a tilted ship
     // levels out onto its tracks: coming out of a tunnel on the surface it doesn't stay pointing at the sky, it drops
-    // its nose and settles. While its drill is in the ground it keeps whatever angle it was drilling at.
+    // its nose and settles. While its drill is in the ground it keeps whatever angle it was drilling at. A powered
+    // antigravity engine turns all of this off: the ship stays where it is driven, at whatever angle it is pitched.
 
     /** The rear-most and front-most points (local z) the tracks rest on, and whether the drill is in terrain. */
     private record Support(double back, double front, boolean drillInTerrain) {
@@ -424,6 +426,11 @@ public class DrillshipEntity extends ShipSectionEntity {
     }
 
     private void applyPhysics(ServerLevel level, ShipState ship, ShipShape shape) {
+        if (ship.isFloating()) {
+            fallSpeed = 0;
+            levelSpeed = 0;
+            return;
+        }
         Support support = support(level, shape);
         if (support == null) {
             levelSpeed = 0;

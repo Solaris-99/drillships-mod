@@ -3,10 +3,10 @@ package com.solaris99.drillship;
 import com.solaris99.drillship.client.ClientConfig;
 import com.solaris99.drillship.client.ClientEvents;
 import com.solaris99.drillship.client.DrillshipHud;
-import com.solaris99.drillship.client.ModulePanelScreen;
 import com.solaris99.drillship.client.ShipSectionRenderer;
 import com.solaris99.drillship.client.ShipStorageScreen;
 import com.solaris99.drillship.client.StatusScreen;
+import com.solaris99.drillship.client.UpgradePanelScreen;
 import com.solaris99.drillship.registry.ModEntities;
 import com.solaris99.drillship.registry.ModMenus;
 
@@ -48,6 +48,6 @@ public class DrillshipsClient {
     private static void registerScreens(RegisterMenuScreensEvent event) {
         event.register(ModMenus.STATUS.get(), StatusScreen::new);
         event.register(ModMenus.SHIP_STORAGE.get(), ShipStorageScreen::new);
-        event.register(ModMenus.MODULE_PANEL.get(), ModulePanelScreen::new);
+        event.register(ModMenus.UPGRADE_PANEL.get(), UpgradePanelScreen::new);
     }
 }

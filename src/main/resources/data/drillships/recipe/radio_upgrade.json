@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "CAC",
+    "CNC",
+    "CRC"
+  ],
+  "key": {
+    "C": { "tag": "c:ingots/copper" },
+    "A": { "item": "minecraft:amethyst_shard" },
+    "N": { "item": "minecraft:note_block" },
+    "R": { "tag": "c:dusts/redstone" }
+  },
+  "result": { "id": "drillships:radio_upgrade", "count": 1 }
+}
