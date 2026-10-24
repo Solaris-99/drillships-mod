@@ -1,0 +1,21 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "drillships:material",
+      "materials": [
+        "steel"
+      ]
+    }
+  ],
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "drillships:steel_ingot"
+    }
+  ],
+  "result": {
+    "id": "drillships:steel_nugget",
+    "count": 9
+  }
+}

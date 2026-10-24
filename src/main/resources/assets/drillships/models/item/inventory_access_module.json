@@ -1,3 +1,6 @@
 {
-  "parent": "drillships:block/inventory_access_module"
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "drillships:item/inventory_access_module"
+  }
 }

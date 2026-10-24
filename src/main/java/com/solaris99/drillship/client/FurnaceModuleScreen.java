@@ -8,7 +8,7 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
-/** The furnace module: input, a progress arrow and output; the push and pull toggles; and the whitelist of what it pulls. */
+/** A furnace module: inputs, a progress arrow and output; the push and pull toggles; and the whitelist of what it pulls. */
 public class FurnaceModuleScreen extends AbstractContainerScreen<FurnaceModuleMenu> {
     private static final int TEXT = 0x404040;
     private static final int WARNING = 0xB02020;

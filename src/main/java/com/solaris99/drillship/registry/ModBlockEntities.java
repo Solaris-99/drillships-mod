@@ -3,6 +3,7 @@ package com.solaris99.drillship.registry;
 import java.util.function.Supplier;
 
 import com.solaris99.drillship.Drillships;
+import com.solaris99.drillship.block.entity.AlloyFurnaceBlockEntity;
 import com.solaris99.drillship.block.entity.EnergyIoBlockEntity;
 import com.solaris99.drillship.block.entity.FurnaceModuleBlockEntity;
 import com.solaris99.drillship.block.entity.InventoryIoBlockEntity;
@@ -20,7 +21,11 @@ public final class ModBlockEntities {
     public static final Supplier<BlockEntityType<InventoryIoBlockEntity>> INVENTORY_IO = BLOCK_ENTITIES.register("inventory_io",
             () -> BlockEntityType.Builder.of(InventoryIoBlockEntity::new, ModBlocks.INVENTORY_IO_MODULE.get()).build(null));
     public static final Supplier<BlockEntityType<FurnaceModuleBlockEntity>> FURNACE_MODULE = BLOCK_ENTITIES.register("furnace_module",
-            () -> BlockEntityType.Builder.of(FurnaceModuleBlockEntity::new, ModBlocks.FURNACE_MODULE.get()).build(null));
+            () -> BlockEntityType.Builder.of(FurnaceModuleBlockEntity::smelting, ModBlocks.FURNACE_MODULE.get()).build(null));
+    public static final Supplier<BlockEntityType<FurnaceModuleBlockEntity>> ALLOY_FURNACE_MODULE = BLOCK_ENTITIES.register("alloy_furnace_module",
+            () -> BlockEntityType.Builder.of(FurnaceModuleBlockEntity::alloying, ModBlocks.ALLOY_FURNACE_MODULE.get()).build(null));
+    public static final Supplier<BlockEntityType<AlloyFurnaceBlockEntity>> ALLOY_FURNACE = BLOCK_ENTITIES.register("alloy_furnace",
+            () -> BlockEntityType.Builder.of(AlloyFurnaceBlockEntity::new, ModBlocks.ALLOY_FURNACE.get()).build(null));
     public static final Supplier<BlockEntityType<EnergyIoBlockEntity>> ENERGY_IO = BLOCK_ENTITIES.register("energy_io",
             () -> BlockEntityType.Builder.of(EnergyIoBlockEntity::new, ModBlocks.ENERGY_IO_MODULE.get()).build(null));
 
@@ -31,6 +36,7 @@ public final class ModBlockEntities {
     public static void registerCapabilities(RegisterCapabilitiesEvent event) {
         event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, INVENTORY_IO.get(), (module, side) -> module.itemHandler());
         event.registerBlockEntity(Capabilities.EnergyStorage.BLOCK, ENERGY_IO.get(), (module, side) -> module.energyStorage());
+        event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, ALLOY_FURNACE.get(), (furnace, side) -> side == null ? furnace.items() : furnace.itemHandler(side));
     }
 
     private ModBlockEntities() {

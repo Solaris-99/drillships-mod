@@ -269,7 +269,7 @@ Modules are fixtures installed into the hull from the inside, in place of shell 
 |--|--|
 | Crafting table | A crafting table. |
 | Furnace | An input and an output slot, no fuel: vanilla smelting speed on 20 FE/t from the buffer, drawn only while smelting; without enough energy it pauses ("No power"). No smelting XP. Options *(in-game)*, both off by default: push the output into the ship inventory, and pull input from it, only items on its 9-entry whitelist of ghost slots (an empty whitelist pulls nothing). It moves items once a second. Lit while smelting. |
-| Alloy furnace | Like the furnace module, with two inputs and the alloy recipes. *(Comes with roadmap step 5.)* |
+| Alloy furnace | Like the furnace module, with two inputs and the alloy recipes (section 12). |
 | Inventory access | Shows the ship's inventory, like the built-in storage access. |
 | Inventory IO | Its side exposes the ship inventory to pipes and hoppers. It never moves items on its own. Mode: input (they can only insert), output (only extract) or both (the default). A rate limit in items per second, each way, set with -64 / -8 / -1 / +1 / +8 / +64 and "No limit" (0, the default), and capped by `inventoryIoMaxRate` *(config, items/s, default 0 = no cap)*. A filter of 9 ghost slots, as a blacklist (the default, so an empty filter passes everything) or a whitelist, applied both ways; items it holds back are hidden from pipes. A plain right-click with a wrench also steps the mode. |
 | Crafting & inventory access | A crafting grid beside a page of the ship's inventory, in one wide screen (crafting on the left, the ship's page with its page buttons on the right, the player's inventory below). Shift-click moves between the player's inventory and the ship's; what's crafted goes to the player, and what doesn't fit there to the ship. |
@@ -304,7 +304,7 @@ All machines on the ship share one buffer (1M / 2M / 5M FE).
 |--|--|
 | Moving | 1 FE/t *(config)*, plus 10 FE/t per engine overdrive |
 | Drilling | 1 FE/t per block of drill face while the drill spins, whether or not anything is being broken *(config)* |
-| Furnace / alloy furnace modules | 20 FE/t while smelting |
+| Furnace / alloy furnace modules | 20 FE/t while working |
 | Energy IO module | Whatever other blocks push in or pull out, up to its limit |
 | Antigravity engine | 200 FE/t while installed |
 | Tesla turret | 100 FE per hit |
@@ -330,13 +330,15 @@ Passengers inside a moving ship never take damage from it.
 
 - Recipes use common tags (`c:ingots/steel`, `c:ingots/bronze`, …). Materials from other mods are preferred.
 - **If no other mod provides tin, zinc, bronze, brass or steel**, the mod enables its own:
-  - ingots, blocks and nuggets
-  - tin and zinc ore, generated like iron ore
-- **Detection:**
-  - The mod checks for popular mods that provide these materials: Create, Mekanism, Thermal and Immersive Engineering.
-  - It then checks whether the matching tag already contains another mod's item, to catch less popular mods.
-  - Items are always registered, because Minecraft can't register them conditionally. When another mod provides the material, our own world generation and recipes are disabled and the items are hidden in JEI.
-- **The alloy furnace and its recipes** are only offered when no other mod provides a way to make the alloys.
+  - an ingot, a nugget and a block of each (9 to 1 both ways)
+  - for tin and zinc, like iron: stone and deepslate ore, raw metal (dropped by the ore, Fortune applies; Silk Touch gives the ore), a block of raw metal, and smelting (200 ticks) and blasting (100 ticks) of raw metal or ore into ingots, 0.7 XP
+  - tin and zinc ore generated like iron's middle and small veins: 10 veins of 9 blocks a chunk between Y −24 and 56 (most around 16), and 10 of 4 from the bottom of the world to Y 72, in every overworld biome
+- **Detection** (`material/Material`), per material:
+  - A popular mod that provides it is loaded: tin and bronze Mekanism or Thermal, zinc and brass Create, steel Mekanism or Immersive Engineering.
+  - Or its `c:ingots/<material>` tag holds another mod's item, to catch less popular mods.
+  - Items are always registered, because Minecraft can't register them conditionally. When another mod provides the material, our recipes for it are off (recipe condition `drillships:material`, checked as recipes load, when tags are known), our ore doesn't generate (placement filter `drillships:material`, checked as chunks generate: worldgen data loads before tags), and our items are hidden in JEI.
+- Our items carry the usual common tags (`c:ingots/tin`, `c:nuggets/tin`, `c:storage_blocks/tin`, `c:raw_materials/tin`, `c:ores/tin`, `c:ores_in_ground/stone`…), so other mods' recipes accept them; the ores are in `c:ores`, so the radar finds them as other metals. Metal blocks are beacon bases.
+- **The alloy furnace and its recipes:** each alloy recipe (bronze, brass, steel) is on only while that alloy is ours. The alloy furnace and the alloy furnace module recipes are on while at least one of them is.
 
 ### Large ore deposits
 - **Shape:** roughly a sphere, 28 to 48 blocks in diameter.
@@ -347,7 +349,11 @@ Passengers inside a moving ship never take damage from it.
 - The radar shows deposits as bright points.
 
 ### Alloy furnace
-A standalone block (and a module). It works like a furnace with two inputs and burns furnace fuel.
+A standalone block (and a module). It works like a furnace with two inputs and burns furnace fuel: one burn-tick per tick, lighting new fuel only when it has an alloy to make. It faces the player who placed it, is lit while burning, drops itself and its contents, and is mined with a pickaxe. Hoppers and pipes fill the inputs from above and the fuel from the sides, and take the output from below. Ingredients go in either input slot.
+
+The **alloy furnace module** works like the furnace module (section 9): 20 FE/t from the buffer while working, two inputs, push and pull toggles with a whitelist. When pulling, an item goes into the input already holding it, else an empty one, so it never fills both.
+
+Alloy recipes are their own data-driven type (`drillships:alloying`: one or two ingredients with counts, a result and a time), so packs can add more. JEI shows them in an Alloy Furnace category, with the alloy furnace and its module as catalysts.
 
 | Alloy | Inputs | Output | Time |
 |--|--|--|--|
@@ -556,9 +562,13 @@ Textures and sounds are supplied by the author. Missing assets use vanilla place
 
 The chair, desk and consoles are block models with elements (the desk and console tops tilted 22.5°); the pod's roof and lamp reuse `exterior/roof`, `exterior/trim`, `hull_ceiling` and `hull_lamp`. Upgrade items have their own icons (`textures/item/radar_upgrade`, `radio_upgrade`, and placeholders `engine_overdrive_upgrade`, `antigravity_upgrade`, `inventory_upgrade` drawn on the radar's case).
 
-Modules are full blocks with one texture on every face (only the face into the room shows): `crafting_module` (crafting), `crafting_inventory_access` (crafting & inventory access: the crafting grid beside a chest), `inventory_access` (a chest), `furnace_off` / `furnace_on`, `inventory_io` (Inventory IO), `energyio`, `hatch`, `small_tesla_turret` / `medium_tesla_turret` (the turret mounts: one or two amber bolts in a ring; placeholders), and `door_bottom` / `door_top` for the door module. Module items show their block's face. The wrench and module base have placeholder icons (`textures/item/wrench`, `module_base`); the ship locator uses vanilla's compass art.
+Modules are full blocks facing into the room (set when installed): their texture is on that face and `hull_00` plating on the others, except the door module, which shows its texture on both sides of the wall, and the hatch and turret mounts, which show theirs on top and bottom. Textures: `crafting_module` (crafting), `crafting_inventory_access` (crafting & inventory access: the crafting grid beside a chest), `inventory_access` (a chest), `furnace_off` / `furnace_on`, `inventory_io` (Inventory IO), `energyio`, `hatch`, `small_tesla_turret` / `medium_tesla_turret` (the turret mounts: one or two amber bolts in a ring; placeholders), and `door_bottom` / `door_top` for the door module.
 
-**Ready for later features:** `alloy_furnace_off`/`alloy_furnace_on`.
+**Item icons** (drawn in the mod, in each tier's colours where it has one): the tier parts (`textures/item/<tier>_wheel`, `_tread`, `_hull`, `_drill_piece`, `_drill_shaft`, `_engine`, `_drill`, `_drillship`, `_wagon`: copper and iron, bronze and brass, steel and diamond), every module and turret (the module base's copper frame with the module's symbol), and the ship locator (a brass dial whose needle turns through `ship_locator_00`..`31`, picked by the compass angle like vanilla's). The wrench, module base, upgrades and materials keep their placeholder icons for now.
+
+The alloy furnace and its module use `alloy_furnace_off` / `alloy_furnace_on` (the standalone block on its front, with vanilla's bricks on every other face).
+
+**Materials** (placeholders drawn for now, one file each): `textures/item/<material>_ingot`, `<material>_nugget`, `raw_tin`, `raw_zinc`; `textures/block/<material>_block`, `raw_tin_block`, `raw_zinc_block`, and `tin_ore_overlay` / `zinc_ore_overlay`, the ore's spots, drawn over vanilla's stone or deepslate by the ore's model.
 
 ### Exterior model
 The exterior is a procedural model built in code from each section's size (`client/model/SectionModel`), so all three tiers and future longer sections share one design. Faces are cut on a 1-block grid, so textures keep 16 pixels per block at any size; body plating uses 2 × 2-block panels.
@@ -589,7 +599,7 @@ Per tier (from `ShipTier.Coupling`):
 
 **Textures** (`textures/block/exterior/`): `plate_00`..`plate_11` (one 2 × 2 panel), `roof`, `trim`, `belly`, `track_belt`, `track_side`, `wheel`, `hazard`, `door_lower`, `door_upper`, `glass`, `lamp`, `lamp_on`, `beacon`, `beacon_on`, `pipe`, `soot`, `vent`, `hatch`, `bellows`, `shutter`, `drill_steel`, `drill_plate`, `drill_tooth`. One palette: painted red-orange plating, gunmetal trim, steel roof and drill, hazard yellow, amber doors matching the interior door.
 
-**Still placeholders:** all item textures and the GUI screens, which are drawn without textures. The fixtures keep the author's art, recoloured from the old red to the exterior's paint.
+**Still placeholders:** the wrench, module base, new upgrade and material icons, and the GUI screens, which are drawn without textures. The fixtures keep the author's art, recoloured from the old red to the exterior's paint.
 
 ### Sounds
 All four are mono, so they fade with distance. Stereo originals are kept in `art-source/sounds/`.
@@ -642,7 +652,7 @@ Spawned on the client, at the exterior model's positions:
    - A. Upgrades: **done** on `feat-upgrades`. The panel modules became upgrades (radar, radio) and three new ones were added: engine overdrive, antigravity engine and inventory upgrade (see section 8). Gametests: `radarupgradesaddup`, `engineoverdrivesstackuptothree`, `antigravityholdstheshipup`, `antigravitywithoutenergyfalls`, `inventoryupgradesaddslots`.
    - B. Modules and wrench: **done** on `feat-modules`. Crafting, furnace, inventory access, Inventory IO, crafting & inventory access, Energy IO, door and hatch modules, the module base, the wrench and the ship locator (see section 9). The alloy furnace module comes with step 5 and the turrets with step 4. Gametests: `modulesgoinandcomeout`, `inventoryiofiltersandlimits`, `energyiokeepsitslimit`, `furnacemodulesmeltsonenergy`, `doormoduleleadsoutside`.
 4. **Tesla turrets: done** on `feat-tesla-turrets` (see section 9, Tesla turrets). The exterior coil reuses `exterior/hatch`, `trim`, `pipe` and `drill_steel`. Gametests: `teslaturretzapshostilesthrougharmor`, `teslaturretsettings`.
-5. **Standard and hardened tiers, materials and alloys.**
+5. **Standard and hardened tiers, materials and alloys: done** on `feat-materials` (see section 12). The standard and hardened tiers now craft from our bronze, brass and steel when no other mod provides them. JEI is an optional dependency (its API at compile time, the full mod in the dev runs only). Gametests: `materialsareourswhennoothermodhasthem`, `alloyfurnacemakesbronze`, `alloyfurnacemodulemakessteel`.
 6. **Ore deposits** (the radar is done, see 2b F).
 7. **Filters and barrels.**
 8. **Mouse steering through the periscope: done** on `feat-mouse-steering`. The ship follows the driver's look within 60° / 45°, shown on the HUD by the steering marker (see Steering and Driver HUD). Gametest: `steerstowardthelook`.

@@ -1,4 +1,6 @@
 {
   "parent": "minecraft:item/generated",
-  "textures": { "layer0": "minecraft:item/clock_16" }
+  "textures": {
+    "layer0": "drillships:item/standard_wheel"
+  }
 }

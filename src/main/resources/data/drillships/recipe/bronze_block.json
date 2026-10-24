@@ -1,0 +1,26 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "drillships:material",
+      "materials": [
+        "bronze"
+      ]
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "###",
+    "###",
+    "###"
+  ],
+  "key": {
+    "#": {
+      "item": "drillships:bronze_ingot"
+    }
+  },
+  "result": {
+    "id": "drillships:bronze_block",
+    "count": 1
+  }
+}

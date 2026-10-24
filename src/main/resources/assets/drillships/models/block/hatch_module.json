@@ -1,6 +1,8 @@
 {
-  "parent": "minecraft:block/cube_all",
+  "parent": "minecraft:block/cube_bottom_top",
   "textures": {
-    "all": "drillships:block/hatch"
+    "top": "drillships:block/hatch",
+    "bottom": "drillships:block/hatch",
+    "side": "drillships:block/hull_00"
   }
 }

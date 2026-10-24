@@ -1,0 +1,26 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "drillships:material",
+      "materials": [
+        "tin"
+      ]
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "###",
+    "###",
+    "###"
+  ],
+  "key": {
+    "#": {
+      "item": "drillships:tin_nugget"
+    }
+  },
+  "result": {
+    "id": "drillships:tin_ingot",
+    "count": 1
+  }
+}

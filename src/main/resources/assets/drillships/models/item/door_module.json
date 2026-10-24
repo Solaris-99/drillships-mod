@@ -1,3 +1,6 @@
 {
-  "parent": "drillships:block/door_module_bottom"
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "drillships:item/door_module"
+  }
 }

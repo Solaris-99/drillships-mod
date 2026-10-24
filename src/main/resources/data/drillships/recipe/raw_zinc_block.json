@@ -1,0 +1,26 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "drillships:material",
+      "materials": [
+        "zinc"
+      ]
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "###",
+    "###",
+    "###"
+  ],
+  "key": {
+    "#": {
+      "item": "drillships:raw_zinc"
+    }
+  },
+  "result": {
+    "id": "drillships:raw_zinc_block",
+    "count": 1
+  }
+}

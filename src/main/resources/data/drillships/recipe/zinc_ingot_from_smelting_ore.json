@@ -1,0 +1,25 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "drillships:material",
+      "materials": [
+        "zinc"
+      ]
+    }
+  ],
+  "type": "minecraft:smelting",
+  "category": "misc",
+  "ingredient": [
+    {
+      "item": "drillships:zinc_ore"
+    },
+    {
+      "item": "drillships:deepslate_zinc_ore"
+    }
+  ],
+  "result": {
+    "id": "drillships:zinc_ingot"
+  },
+  "experience": 0.7,
+  "cookingtime": 200
+}

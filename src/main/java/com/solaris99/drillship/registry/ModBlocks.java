@@ -1,6 +1,7 @@
 package com.solaris99.drillship.registry;
 
 import com.solaris99.drillship.Drillships;
+import com.solaris99.drillship.block.AlloyFurnaceBlock;
 import com.solaris99.drillship.block.CockpitBlock;
 import com.solaris99.drillship.block.FurnaceModuleBlock;
 import com.solaris99.drillship.block.HullPanelBlock;
@@ -65,7 +66,9 @@ public final class ModBlocks {
     public static final DeferredBlock<ModuleBlock> INVENTORY_ACCESS_MODULE = module("inventory_access_module", ModuleBlock.Kind.INVENTORY_ACCESS);
     public static final DeferredBlock<ModuleBlock> INVENTORY_IO_MODULE = module("inventory_io_module", ModuleBlock.Kind.INVENTORY_IO);
     public static final DeferredBlock<FurnaceModuleBlock> FURNACE_MODULE = BLOCKS.register("furnace_module",
-            () -> new FurnaceModuleBlock(interior().lightLevel(state -> state.getValue(FurnaceModuleBlock.LIT) ? 13 : 0)));
+            () -> new FurnaceModuleBlock(ModuleBlock.Kind.FURNACE, interior().lightLevel(state -> state.getValue(FurnaceModuleBlock.LIT) ? 13 : 0)));
+    public static final DeferredBlock<FurnaceModuleBlock> ALLOY_FURNACE_MODULE = BLOCKS.register("alloy_furnace_module",
+            () -> new FurnaceModuleBlock(ModuleBlock.Kind.ALLOY_FURNACE, interior().lightLevel(state -> state.getValue(FurnaceModuleBlock.LIT) ? 13 : 0)));
     public static final DeferredBlock<ModuleBlock> ENERGY_IO_MODULE = module("energy_io_module", ModuleBlock.Kind.ENERGY_IO);
     public static final DeferredBlock<ModuleDoorBlock> DOOR_MODULE = BLOCKS.register("door_module", () -> new ModuleDoorBlock(interior()));
     public static final DeferredBlock<ModuleBlock> HATCH_MODULE = module("hatch_module", ModuleBlock.Kind.HATCH);
@@ -73,6 +76,11 @@ public final class ModBlocks {
             () -> new TeslaTurretBlock(TeslaTurret.SMALL, interior()));
     public static final DeferredBlock<TeslaTurretBlock> MEDIUM_TESLA_TURRET = BLOCKS.register("medium_tesla_turret",
             () -> new TeslaTurretBlock(TeslaTurret.MEDIUM, interior()));
+
+    // The standalone alloy furnace, placed in the world like a furnace.
+    public static final DeferredBlock<AlloyFurnaceBlock> ALLOY_FURNACE = BLOCKS.register("alloy_furnace", () -> new AlloyFurnaceBlock(
+            BlockBehaviour.Properties.of().mapColor(MapColor.STONE).requiresCorrectToolForDrops().strength(3.5F)
+                    .lightLevel(state -> state.getValue(AlloyFurnaceBlock.LIT) ? 13 : 0)));
 
     // The cockpit (see InteriorLayout.cockpit): the driver's chair, the desk across the front, the consoles beside the
     // chair, screens on the front wall, and the glazed bulkhead that sets it apart from the rest of the cabin.

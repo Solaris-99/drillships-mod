@@ -1,9 +1,45 @@
 {
   "variants": {
-    "lit=false": {
+    "facing=north,lit=false": {
       "model": "drillships:block/furnace_module"
     },
-    "lit=true": {
+    "facing=north,lit=true": {
+      "model": "drillships:block/furnace_module_lit"
+    },
+    "facing=east,lit=false": {
+      "model": "drillships:block/furnace_module",
+      "y": 90
+    },
+    "facing=east,lit=true": {
+      "model": "drillships:block/furnace_module_lit",
+      "y": 90
+    },
+    "facing=south,lit=false": {
+      "model": "drillships:block/furnace_module",
+      "y": 180
+    },
+    "facing=south,lit=true": {
+      "model": "drillships:block/furnace_module_lit",
+      "y": 180
+    },
+    "facing=west,lit=false": {
+      "model": "drillships:block/furnace_module",
+      "y": 270
+    },
+    "facing=west,lit=true": {
+      "model": "drillships:block/furnace_module_lit",
+      "y": 270
+    },
+    "facing=up,lit=false": {
+      "model": "drillships:block/furnace_module"
+    },
+    "facing=up,lit=true": {
+      "model": "drillships:block/furnace_module_lit"
+    },
+    "facing=down,lit=false": {
+      "model": "drillships:block/furnace_module"
+    },
+    "facing=down,lit=true": {
       "model": "drillships:block/furnace_module_lit"
     }
   }
