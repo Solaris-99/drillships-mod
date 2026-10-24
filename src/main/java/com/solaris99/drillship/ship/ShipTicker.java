@@ -71,7 +71,8 @@ public final class ShipTicker {
         }
     }
 
-    // The status panel lights up on warnings and the generator lights up while burning.
+    // The status panel lights up on warnings, the generator lights up while burning, and the module panels show their
+    // modules and the radio's station.
     private static void updateIndicators(MinecraftServer server, ShipState ship, long gameTime) {
         ServerLevel interior = server.getLevel(ModKeys.INTERIOR);
         if (interior == null) {
@@ -80,6 +81,9 @@ public final class ShipTicker {
         InteriorLayout layout = ship.layout();
         setActive(interior, layout.statusPanel(), ship.warnings(gameTime) != 0);
         setActive(interior, layout.generator(), ship.isBurning());
+        if (ship.panelsChanged() && Interiors.showModules(interior, layout, ship)) {
+            ship.clearPanelsChanged();
+        }
     }
 
     private static void setActive(ServerLevel level, BlockPos pos, boolean active) {

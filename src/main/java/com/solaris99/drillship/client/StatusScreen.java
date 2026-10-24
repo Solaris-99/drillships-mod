@@ -48,6 +48,8 @@ public class StatusScreen extends AbstractContainerScreen<StatusMenu> {
                 .bounds(leftPos + 7, top + 20, 80, 18).build());
         addRenderableWidget(Button.builder(Component.translatable("gui.drillships.pick_up"), b -> press(StatusMenu.BUTTON_PICK_UP))
                 .bounds(leftPos + 89, top + 20, 80, 18).build());
+        addRenderableWidget(Button.builder(Component.translatable("gui.drillships.controls"), b -> minecraft.setScreen(new DriveControlsScreen(this)))
+                .bounds(leftPos + imageWidth - 64, topPos + 3, 60, 14).build());
     }
 
     private void press(int button) {

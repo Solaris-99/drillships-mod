@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "PPP",
+    "WWW",
+    "PPP"
+  ],
+  "key": {
+    "P": {
+      "tag": "c:ingots/bronze"
+    },
+    "W": {
+      "item": "drillships:standard_wheel"
+    }
+  },
+  "result": {
+    "id": "drillships:standard_tread",
+    "count": 1
+  }
+}

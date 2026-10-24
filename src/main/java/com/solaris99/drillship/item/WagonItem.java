@@ -25,10 +25,7 @@ public class WagonItem extends Item {
     }
 
     public static ItemStack create(ShipTier tier) {
-        return switch (tier) {
-            case BASIC -> new ItemStack(ModItems.BASIC_WAGON.get());
-            case STANDARD, HARDENED -> throw new IllegalStateException("Tier not implemented yet: " + tier);
-        };
+        return new ItemStack(ModItems.wagon(tier));
     }
 
     @Override

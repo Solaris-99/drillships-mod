@@ -1,6 +1,7 @@
 package com.solaris99.drillship.registry;
 
 import com.solaris99.drillship.Drillships;
+import com.solaris99.drillship.menu.ModulePanelMenu;
 import com.solaris99.drillship.menu.ShipStorageMenu;
 import com.solaris99.drillship.menu.StatusMenu;
 
@@ -17,6 +18,8 @@ public final class ModMenus {
             () -> IMenuTypeExtension.create(StatusMenu::new));
     public static final DeferredHolder<MenuType<?>, MenuType<ShipStorageMenu>> SHIP_STORAGE = MENUS.register("ship_storage",
             () -> IMenuTypeExtension.create(ShipStorageMenu::new));
+    public static final DeferredHolder<MenuType<?>, MenuType<ModulePanelMenu>> MODULE_PANEL = MENUS.register("module_panel",
+            () -> IMenuTypeExtension.create(ModulePanelMenu::new));
 
     private ModMenus() {
     }

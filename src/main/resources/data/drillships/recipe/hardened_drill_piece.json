@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "SSS",
+    " P ",
+    " P "
+  ],
+  "key": {
+    "S": {
+      "tag": "c:gems/diamond"
+    },
+    "P": {
+      "tag": "c:ingots/steel"
+    }
+  },
+  "result": {
+    "id": "drillships:hardened_drill_piece",
+    "count": 1
+  }
+}

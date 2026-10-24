@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "HT ",
+    "HED",
+    "HT "
+  ],
+  "key": {
+    "H": {
+      "item": "drillships:standard_hull"
+    },
+    "T": {
+      "item": "drillships:standard_tread"
+    },
+    "E": {
+      "item": "drillships:standard_engine"
+    },
+    "D": {
+      "item": "drillships:standard_drill"
+    }
+  },
+  "result": {
+    "id": "drillships:standard_drillship",
+    "count": 1
+  }
+}

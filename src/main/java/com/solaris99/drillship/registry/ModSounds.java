@@ -14,6 +14,8 @@ public final class ModSounds {
     public static final DeferredHolder<SoundEvent, SoundEvent> ENGINE_WORKING = register("engine_working");
     public static final DeferredHolder<SoundEvent, SoundEvent> ENGINE_STOP = register("engine_stop");
     public static final DeferredHolder<SoundEvent, SoundEvent> DIGGING = register("digging");
+    // The radio module's own station.
+    public static final DeferredHolder<SoundEvent, SoundEvent> RADIO_TUMBERA = register("music.cumbia_del_taladro");
 
     private static DeferredHolder<SoundEvent, SoundEvent> register(String name) {
         return SOUNDS.register(name, () -> SoundEvent.createVariableRangeEvent(Drillships.id(name)));

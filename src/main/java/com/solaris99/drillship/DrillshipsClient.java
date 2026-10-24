@@ -1,7 +1,9 @@
 package com.solaris99.drillship;
 
+import com.solaris99.drillship.client.ClientConfig;
 import com.solaris99.drillship.client.ClientEvents;
 import com.solaris99.drillship.client.DrillshipHud;
+import com.solaris99.drillship.client.ModulePanelScreen;
 import com.solaris99.drillship.client.ShipSectionRenderer;
 import com.solaris99.drillship.client.ShipStorageScreen;
 import com.solaris99.drillship.client.StatusScreen;
@@ -12,6 +14,7 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
@@ -24,6 +27,7 @@ import net.neoforged.neoforge.common.NeoForge;
 public class DrillshipsClient {
     public DrillshipsClient(IEventBus modEventBus, ModContainer container) {
         container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
+        container.registerConfig(ModConfig.Type.CLIENT, ClientConfig.SPEC);
 
         modEventBus.addListener(DrillshipsClient::registerRenderers);
         modEventBus.addListener(DrillshipsClient::registerScreens);
@@ -44,5 +48,6 @@ public class DrillshipsClient {
     private static void registerScreens(RegisterMenuScreensEvent event) {
         event.register(ModMenus.STATUS.get(), StatusScreen::new);
         event.register(ModMenus.SHIP_STORAGE.get(), ShipStorageScreen::new);
+        event.register(ModMenus.MODULE_PANEL.get(), ModulePanelScreen::new);
     }
 }

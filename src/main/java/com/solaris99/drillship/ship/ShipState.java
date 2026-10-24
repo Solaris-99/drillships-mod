@@ -10,6 +10,7 @@ import javax.annotation.Nullable;
 
 import com.solaris99.drillship.entity.DrillshipEntity;
 import com.solaris99.drillship.item.DrillItem;
+import com.solaris99.drillship.item.ModuleItem;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
@@ -41,12 +42,12 @@ public class ShipState {
     public static final int WARN_DRILL_BROKEN = 1 << 5;
     public static final int WARN_BLOCKED = 1 << 6;
 
+    public static final int MODULES_PER_PANEL = 4;
+
     // How long transient warnings stay lit after the last time they happened.
     private static final int WARNING_TICKS = 100;
     // Wagons follow the drillhead's recorded path; a point is recorded every PATH_SPACING blocks travelled.
     private static final double PATH_SPACING = 0.25;
-    // Space between consecutive sections, so wagons can turn without overlapping.
-    private static final double COUPLING_GAP = 0.5;
 
     private final ShipManager manager;
     private final UUID id;
@@ -66,7 +67,13 @@ public class ShipState {
     private boolean drillOn;
     private boolean autoFuel = true;
     private int wagonCount;
-    // Positions of the drillhead's origin, oldest first.
+    // The modules in the panels, four per panel, the radio's station (0 for off) and what the radar looks for.
+    private final ItemStackHandler modules;
+    private int radioStation;
+    private RadarOre radarTarget = RadarOre.IRON;
+    // Set when the modules or the station change, so the panels inside get redrawn.
+    private boolean panelsChanged = true;
+    // Positions of the drillhead's centre at half its height, oldest first.
     private final List<Vec3> path = new ArrayList<>();
     // The light block placed by the headlights, so it can be removed even after a restart.
     @Nullable
@@ -88,6 +95,26 @@ public class ShipState {
         this.inventory = handler(tier.inventorySlots(), stack -> true);
         this.fuel = handler(1, stack -> stack.getBurnTime(RecipeType.SMELTING) > 0);
         this.drill = handler(1, stack -> stack.getItem() instanceof DrillItem);
+        this.modules = new ItemStackHandler(tier.modulePanels() * MODULES_PER_PANEL) {
+            @Override
+            protected void onContentsChanged(int slot) {
+                if (!hasModule(ShipModule.RADIO)) {
+                    radioStation = 0;
+                }
+                panelsChanged = true;
+                manager.setDirty();
+            }
+
+            @Override
+            public boolean isItemValid(int slot, ItemStack stack) {
+                return stack.getItem() instanceof ModuleItem;
+            }
+
+            @Override
+            public int getSlotLimit(int slot) {
+                return 1;
+            }
+        };
     }
 
     private ItemStackHandler handler(int size, Predicate<ItemStack> valid) {
@@ -151,6 +178,91 @@ public class ShipState {
         manager.setDirty();
     }
 
+    // Modules
+
+    /** The module panels' slots: panel {@code p} holds slots {@code 4p} to {@code 4p + 3}. */
+    public IItemHandlerModifiable modules() {
+        return modules;
+    }
+
+    /** The module in a slot, or null when it is empty. */
+    @Nullable
+    public ShipModule moduleAt(int slot) {
+        return modules.getStackInSlot(slot).getItem() instanceof ModuleItem item ? item.module() : null;
+    }
+
+    public int moduleCount(ShipModule module) {
+        int count = 0;
+        for (int slot = 0; slot < modules.getSlots(); slot++) {
+            if (moduleAt(slot) == module) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    public boolean hasModule(ShipModule module) {
+        return moduleCount(module) > 0;
+    }
+
+    /** The kinds of module installed, as ShipModule bits: they show on the exterior. */
+    public int moduleMask() {
+        int mask = 0;
+        for (int slot = 0; slot < modules.getSlots(); slot++) {
+            ShipModule module = moduleAt(slot);
+            mask |= module == null ? 0 : module.bit();
+        }
+        return mask;
+    }
+
+    /** Empties the panels, returning what was in them. */
+    public List<ItemStack> takeModules() {
+        List<ItemStack> taken = new ArrayList<>();
+        for (int slot = 0; slot < modules.getSlots(); slot++) {
+            if (!modules.getStackInSlot(slot).isEmpty()) {
+                taken.add(modules.getStackInSlot(slot));
+                modules.setStackInSlot(slot, ItemStack.EMPTY);
+            }
+        }
+        return taken;
+    }
+
+    public int radioStation() {
+        return radioStation;
+    }
+
+    /** Tunes the radio; without one it stays off. */
+    public void setRadioStation(int station) {
+        radioStation = hasModule(ShipModule.RADIO) ? station : 0;
+        panelsChanged = true;
+        manager.setDirty();
+    }
+
+    /** The radar's tier: one per radar module installed, up to ShipRadar.MAX_TIER; 0 without a radar. */
+    public int radarTier() {
+        return ShipRadar.tier(moduleCount(ShipModule.RADAR));
+    }
+
+    /** What the radar looks for. A kind the radar's tier can't find falls back to iron. */
+    public RadarOre radarTarget() {
+        return radarTarget.foundAt(Math.max(1, radarTier())) ? radarTarget : RadarOre.IRON;
+    }
+
+    /** Moves the radar's target to the next (or, with a negative step, previous) kind its tier finds. */
+    public void cycleRadarTarget(int step) {
+        radarTarget = radarTarget().next(Math.max(1, radarTier()), step);
+        manager.setDirty();
+    }
+
+    /** The modules or the station changed since the panels inside last showed them. */
+    public boolean panelsChanged() {
+        return panelsChanged;
+    }
+
+    public void clearPanelsChanged() {
+        panelsChanged = false;
+    }
+
     // Wagons
 
     public int wagonCount() {
@@ -175,26 +287,48 @@ public class ShipState {
     }
 
     /**
-     * Where a wagon sits, like a train car: both its ends lie on the drillhead's path and its body spans the chord
-     * between them.
+     * Where a wagon sits, like a train car: both ends of its centre line, at half its height, lie on the path of the
+     * drillhead's centre, and its body spans the chord between them. Joining sections at half height (rather than at
+     * the bottom) lets them bend up or down about twice as far before their ends touch.
      */
     public Pose wagonPose(int wagon) {
+        return wagonPose(wagon, position, yaw, pitch);
+    }
+
+    /** Where a wagon would sit if the drillhead were at this pose; the path itself isn't changed. */
+    public Pose wagonPose(int wagon, Vec3 headPosition, float headYaw, float headPitch) {
         double length = tier.wagonExteriorLength();
-        double front = -ShipShape.drillhead(tier).back + COUPLING_GAP + (wagon - 1) * (length + COUPLING_GAP);
-        Vec3 frontEnd = pointBehind(front);
-        Vec3 backEnd = pointBehind(front + length);
+        double gap = tier.coupling().gap();
+        double front = -ShipShape.drillhead(tier).back + gap + (wagon - 1) * (length + gap);
+        Vec3 headCenter = center(headPosition, headYaw, headPitch);
+        Vec3 frontEnd = pointBehind(headCenter, headYaw, headPitch, front);
+        Vec3 backEnd = pointBehind(headCenter, headYaw, headPitch, front + length);
         Vec3 direction = frontEnd.subtract(backEnd);
         float wagonYaw = (float) (Mth.atan2(-direction.x, direction.z) * Mth.RAD_TO_DEG);
         float wagonPitch = (float) (-Math.asin(Mth.clamp(direction.y / direction.length(), -1.0, 1.0)) * Mth.RAD_TO_DEG);
-        return new Pose(frontEnd.add(backEnd).scale(0.5), wagonYaw, wagonPitch);
+        Vec3 up = ShipShape.Frame.of(Vec3.ZERO, wagonYaw, wagonPitch).up();
+        return new Pose(frontEnd.add(backEnd).scale(0.5).subtract(up.scale(tier.exteriorHeight() / 2.0)), wagonYaw, wagonPitch);
     }
 
-    /** The point {@code distance} blocks behind the drillhead along its path, extended straight back past its end. */
-    private Vec3 pointBehind(double distance) {
-        Vec3 previous = position;
-        Vec3 direction = ShipShape.Frame.of(Vec3.ZERO, yaw, pitch).forward().reverse();
+    // The middle of a section at half its height: what the path follows.
+    private Vec3 center(Vec3 origin, float sectionYaw, float sectionPitch) {
+        return ShipShape.Frame.of(origin, sectionYaw, sectionPitch).toWorld(0, tier.exteriorHeight() / 2.0, 0);
+    }
+
+    /**
+     * The point {@code distance} blocks behind {@code start} along the path, extended straight back past its end.
+     * Recorded points ahead of {@code start} are skipped, as when reversing.
+     */
+    private Vec3 pointBehind(Vec3 start, float headYaw, float headPitch, double distance) {
+        Vec3 forward = ShipShape.Frame.of(Vec3.ZERO, headYaw, headPitch).forward();
+        Vec3 previous = start;
+        Vec3 direction = forward.reverse();
         double remaining = distance;
-        for (int i = path.size() - 1; i >= 0; i--) {
+        int i = path.size() - 1;
+        while (i >= 0 && path.get(i).subtract(start).dot(forward) > 1.0E-3) {
+            i--;
+        }
+        for (; i >= 0; i--) {
             Vec3 next = path.get(i);
             double segment = previous.distanceTo(next);
             if (segment < 1.0E-6) {
@@ -213,20 +347,21 @@ public class ShipState {
     private void recordPath() {
         // Reversing: drop recorded points that are now ahead of the drillhead, so wagons get pushed back along the path.
         Vec3 forward = ShipShape.Frame.of(Vec3.ZERO, yaw, pitch).forward();
-        while (!path.isEmpty() && path.get(path.size() - 1).subtract(position).dot(forward) > 1.0E-3) {
+        Vec3 center = center(position, yaw, pitch);
+        while (!path.isEmpty() && path.get(path.size() - 1).subtract(center).dot(forward) > 1.0E-3) {
             path.remove(path.size() - 1);
         }
-        if (path.isEmpty() || position.distanceTo(path.get(path.size() - 1)) >= PATH_SPACING) {
-            path.add(position);
+        if (path.isEmpty() || center.distanceTo(path.get(path.size() - 1)) >= PATH_SPACING) {
+            path.add(center);
             trimPath();
         }
     }
 
     // Keep just enough path for the last wagon.
     private void trimPath() {
-        double needed = -ShipShape.drillhead(tier).back + wagonCount * (tier.wagonExteriorLength() + COUPLING_GAP) + 1.0;
+        double needed = -ShipShape.drillhead(tier).back + wagonCount * (tier.wagonExteriorLength() + tier.coupling().gap()) + 1.0;
         double length = 0;
-        Vec3 previous = position;
+        Vec3 previous = center(position, yaw, pitch);
         for (int i = path.size() - 1; i >= 0; i--) {
             length += previous.distanceTo(path.get(i));
             previous = path.get(i);
@@ -448,6 +583,9 @@ public class ShipState {
         tag.putBoolean("DrillOn", drillOn);
         tag.putBoolean("AutoFuel", autoFuel);
         tag.putInt("Wagons", wagonCount);
+        tag.put("Modules", modules.serializeNBT(registries));
+        tag.putInt("RadioStation", radioStation);
+        tag.putString("RadarTarget", radarTarget.name());
         ListTag pathTag = new ListTag();
         for (Vec3 point : path) {
             CompoundTag pointTag = new CompoundTag();
@@ -478,6 +616,12 @@ public class ShipState {
         ship.drillOn = tag.getBoolean("DrillOn");
         ship.autoFuel = tag.getBoolean("AutoFuel");
         ship.wagonCount = tag.getInt("Wagons");
+        ship.radioStation = tag.getInt("RadioStation");
+        for (RadarOre kind : RadarOre.values()) {
+            if (kind.name().equals(tag.getString("RadarTarget"))) {
+                ship.radarTarget = kind;
+            }
+        }
         for (Tag entry : tag.getList("Path", Tag.TAG_COMPOUND)) {
             CompoundTag point = (CompoundTag) entry;
             ship.path.add(new Vec3(point.getDouble("X"), point.getDouble("Y"), point.getDouble("Z")));
@@ -486,6 +630,12 @@ public class ShipState {
         ship.inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
         ship.fuel.deserializeNBT(registries, tag.getCompound("Fuel"));
         ship.drill.deserializeNBT(registries, tag.getCompound("Drill"));
+        // Ships saved before the panels kept their modules as bits; those modules are gone.
+        if (tag.contains("Modules", Tag.TAG_COMPOUND)) {
+            CompoundTag modulesTag = tag.getCompound("Modules");
+            modulesTag.remove("Size");
+            ship.modules.deserializeNBT(registries, modulesTag);
+        }
         return ship;
     }
 }

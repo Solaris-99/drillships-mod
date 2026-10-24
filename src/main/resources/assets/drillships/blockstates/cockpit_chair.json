@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "drillships:block/cockpit_chair" },
+    "facing=east": { "model": "drillships:block/cockpit_chair", "y": 90 },
+    "facing=south": { "model": "drillships:block/cockpit_chair", "y": 180 },
+    "facing=west": { "model": "drillships:block/cockpit_chair", "y": 270 }
+  }
+}

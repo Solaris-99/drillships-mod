@@ -2,6 +2,7 @@ package com.solaris99.drillship.registry;
 
 import com.solaris99.drillship.Drillships;
 
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
@@ -17,15 +18,14 @@ public final class ModCreativeTabs {
             .withTabsBefore(CreativeModeTabs.SPAWN_EGGS)
             .icon(() -> ModItems.BASIC_DRILLSHIP.get().getDefaultInstance())
             .displayItems((parameters, output) -> {
-                output.accept(ModItems.BASIC_DRILLSHIP.get());
-                output.accept(ModItems.BASIC_WAGON.get());
-                output.accept(ModItems.BASIC_DRILL.get());
-                output.accept(ModItems.BASIC_ENGINE.get());
-                output.accept(ModItems.BASIC_HULL.get());
-                output.accept(ModItems.BASIC_TREAD.get());
-                output.accept(ModItems.BASIC_WHEEL.get());
-                output.accept(ModItems.BASIC_DRILL_PIECE.get());
-                output.accept(ModItems.BASIC_DRILL_SHAFT.get());
+                // One row per tier, then the modules.
+                for (String tier : new String[] {"basic", "standard", "hardened"}) {
+                    for (String part : new String[] {"drillship", "wagon", "drill", "engine", "hull", "tread", "wheel", "drill_piece", "drill_shaft"}) {
+                        output.accept(BuiltInRegistries.ITEM.get(Drillships.id(tier + "_" + part)));
+                    }
+                }
+                output.accept(ModItems.RADAR_MODULE.get());
+                output.accept(ModItems.RADIO_MODULE.get());
             }).build());
 
     private ModCreativeTabs() {

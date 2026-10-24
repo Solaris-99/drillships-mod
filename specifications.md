@@ -19,7 +19,7 @@ This document is the source of truth for the mod's design. The README is a playe
 | | Basic | Standard | Hardened |
 |--|--|--|--|
 | Wagon interior (w × h × l) | 3 × 3 × 7 | 5 × 5 × 10 | 9 × 9 × 15 |
-| Drillhead interior (w × h × l) | 3 × 3 × 5 | 5 × 5 × 5 | 9 × 9 × 5 |
+| Drillhead interior (w × h × l) | 3 × 3 × 5 | 5 × 5 × 7 | 9 × 9 × 9 |
 | Exterior cross-section (with hull) | 5 × 5 | 7 × 7 | 11 × 11 |
 | Max wagons | 3 | 5 | 8 |
 | Ship inventory (slots) | 100 | 150 | 200 |
@@ -50,21 +50,31 @@ The hull is one block thick, so the exterior is the interior plus 2 in each dire
 ## 3. Driving
 
 ### Getting in and out
-- **Enter:** right-click the drillhead's exterior, or a wagon's exterior to enter that wagon.
-- **Leave:** use the door (or a hatch module). The player is placed beside the drillhead, behind it (only when no wagons are attached) or on top of it, whichever has room. If none has room, a "the way out is blocked" message is shown.
-- **Drive:** use the helm. The player is moved to the exterior and seated at the front of the drill, looking through the periscope. This causes a short dimension-change loading screen.
-- **Stop driving:** Shift. The player returns to the helm.
+- **Doors:** every section (drillhead and wagons) has one door, in its right wall, third block from the back, 2 blocks high, in the same place inside and out. The exterior door slides open and closed (with iron door sounds) whenever someone goes through.
+- **Enter:** right-click any section's exterior. The player comes in through that section's door and stands just inside it.
+- **Leave:** use a door (or a hatch module). The player steps out beside that same door, on the ground or on the track. If blocks are in the way, the door cuts a way out the size of a player: the blocks are broken as the player (claims, spawn protection and unbreakable blocks are respected, and blocks with inventories are never broken) and their drops go to the ship's inventory. If that isn't allowed, the player goes out the other side, behind the last section, or on top, whichever has room; failing all of them a "the way out is blocked" message is shown.
+- **Collision:** sections are solid. Each one is covered by a grid of 4 × 6 collision parts (NeoForge part entities), each the bounds of its slice of the rotated hull, so players and mobs bump into and stand on the hull itself even when the ship is turned diagonally. Clicking any part clicks its section, and parts also stop blocks from being placed inside the ship.
+- **Drive:** sit in the driver's chair in the cockpit (or use the helm). The player is moved to the exterior and seated at the front of the drill, looking through the periscope. This causes a short dimension-change loading screen.
+- **Stop driving:** the "Leave the helm" key (Shift by default). The player gets up just behind the chair, facing the front.
 - A player who logs out while driving logs back in at the helm.
 - While driving, the player can't break or place blocks and takes no damage.
 
 ### Controls
-| Key | Action |
-|--|--|
-| W / S | Accelerate / brake and reverse (reverse up to 25% of top speed) |
-| A / D | Steer left / right |
-| Space / Ctrl | Pitch up / down (limited to ±30°) |
-| F | Toggle the drill (rebindable; only active while driving) |
-| Shift | Stop driving |
+| Action | Default | Notes |
+|--|--|--|
+| Accelerate / brake and reverse | W / S | Reverse up to 25% of top speed |
+| Steer left / right | A / D | |
+| Pitch up / down | Space / Left Ctrl | Limited to ±30° |
+| Drill | F | Toggle (press to start, press again to stop) or hold (spins while held), chosen in the controls panel |
+| Radar target | R | The next kind of ore for the radar to look for (with a radar module) |
+| Leave the helm | Left Shift | |
+
+Every action can be bound to any key or mouse button, in the **controls panel** (the Controls button on the status panel) or in vanilla's key binds under "Drillships". The bindings are only live while driving, so they may share keys with anything done on foot: while driving, vanilla actions on the same keys are held back (a click bound to the drill doesn't also attack; Shift bound to pitching down doesn't also leave the helm, since leaving is whatever key "Leave the helm" is on). The panel shows two driving actions on the same key in red. The drill mode is a client setting (`drillships-client.toml`, `drillMode`).
+
+### Camera
+- **First person (periscope):** the eye sits on the drill's axis, 1 block behind the hull's front face. Blocks being drilled can reach at most √3/2 of a block into the hull, so they never cover the view, and the "inside a block" overlay is suppressed while driving. The view turns and pitches with the ship, so the crosshair points where the drill is heading.
+- **Third person:** the camera backs off to the hull's length plus 1.5 × its height, enough to see the whole drillhead.
+- A ship section is not drawn while the camera is inside it (or within 0.2 blocks), e.g. the drillhead from the periscope or a wagon when a tunnel pulls the third-person camera in.
 
 ### Driver HUD
 While driving, a HUD styled like an old military terminal (green monospace text on dark panels with scanlines) shows:
@@ -73,12 +83,15 @@ While driving, a HUD styled like an old military terminal (green monospace text 
 - **Drill:** on/off and durability.
 - **Speed.**
 - **Warnings**, blinking: inventory full, no/low power, no drill, drill broken/worn, path blocked.
+- **Radar** (a compass line at the top), when the ship has radar modules (see section 6, Radar).
 
 *Later:* steering with the mouse through the periscope, with two modes. **Drive** mode, used while moving, limits the view to the front of the ship. **Free look** mode, only available while stopped, lets the player look around freely.
 
 ### Movement rules
 - The ship turns freely (any angle) and climbs 1-block steps when the drill is off.
-- **Gravity:** if nothing is under the ship, it falls, keeping its horizontal momentum, and snaps to the block grid on landing.
+- **Support and falling:** what holds the drillhead up is whatever lies under its tracks (from the back to the drill face), or its drill biting into terrain. With neither, it falls, keeping its horizontal momentum; a level landing snaps to the block grid.
+- **Levelling out:** out in the open (nothing in the drill zone) and with the driver not pitching, a tilted ship turns back to level, accelerating (0.25°/tick², up to 4°/tick), hinged on its front-most support (else its rear-most, else its middle). Coming out of a tunnel on the surface it drops its nose and settles on its tracks instead of staying pointed at the sky; after landing nose first, its back comes down. While still inside the tunnel, or resting on a slope, it can't turn and stays as it is. With the drill in terrain it keeps whatever angle it was drilling at.
+- **Coupled sections never cross:** before the drillhead turns, pitches, levels out or drives, the new pose is checked against the first wagon (and, when driving, every coupled pair at the poses the path would give them): if two neighbours would start overlapping, or the drillhead would bend more than 35° / 40° / 35° away from the first wagon, that motion doesn't happen and the "path blocked" warning lights. A joint already past its limit may always straighten out. Falling is never held back by the wagons.
 - **Fluids:** the ship drives through water and lava like any entity. Fluids never get into the interior.
 - **Energy:** moving costs 1 FE/t *(config)*. At 0 energy the ship stops and a warning lights up.
 - **Chunk loading:** the chunks around each ship and its interior stay loaded *(config, default on)*.
@@ -130,15 +143,27 @@ The drillhead is the only required section. Its built-in fixtures are fixed and 
 
 | Fixture | Function |
 |--|--|
-| **Helm** | Steering controls and periscope. Using it starts driving. |
+| **Cockpit** | The driver's chair (sit down to drive), the desk and consoles around it (they open the status panel) and screens on the front wall, set apart from the rest of the cabin (see below). |
+| **Helm** | The periscope screen on the front wall, above the desk. Using it also starts driving. |
 | **Periscope** | Switches the player's camera to the front and center of the drill. Night vision may come as a module later. |
 | **Status panel** | Readouts, warnings, drill slot, fuel slot, toggles. Lights up while any warning is active. |
-| **Radar** | 2D top-down map of nearby ores (see below). |
-| **Generator** | Burns fuel to produce FE. Lights up while burning. |
-| **Storage access** | Opens the ship's inventory. |
+| **Module panels** | In the left wall, beside the cockpit: 1 / 2 / 3 per tier, four modules each (see section 8). |
+| **Generator** | Burns fuel to produce FE. Lights up while burning. On the right wall, beside the cockpit, under the exhaust. |
+| **Storage access** | Opens the ship's inventory. On the left wall at the back, next to the crafting table, facing the door. |
 | **Crafting table** | A normal crafting table. |
 | **Door** | Exit. |
 | **Headlights** | Light up the area in front of the drillhead while the engine runs (see below). |
+
+### Cockpit
+The chair sits two blocks back from the front wall, with a desk across the cockpit in front of it (slanted control surfaces, keys and small displays), a console on either side of it (gauges and levers) and screens filling the front wall beside the helm and status panel (a radar repeater next to the helm, telemetry further out). How it is set apart depends on the cabin:
+
+| Tier | Cabin (inside) | Cockpit |
+|--|--|--|
+| Basic | 3 × 3 × 5 | The front two rows: desk, chair and its two consoles fill the width, flanked by the generator and the module panel on the walls. No room for a partition. |
+| Standard | 5 × 5 × 7 | The front two rows, behind a glazed bulkhead across the cabin: a kick plate, two rows of glass, a header with hazard stripes over a three-wide opening, and the wall pipes carried across above it. A lamp over the chair. |
+| Hardened | 9 × 9 × 9 | A glazed pod, three wide and three deep inside (desk, chair between its consoles, and a walkway behind), three high under its own roof and lamp, with posts at the back corners and a two-high door under a striped header. It leaves a bay on either side: the generator's on the right, the module panels' on the left. |
+
+The cockpit blocks are built in, like the hull; they don't stop the ship from being picked up.
 
 ### Status panel
 - **Shows:**
@@ -170,19 +195,28 @@ The drillhead is the only required section. Its built-in fixtures are fixed and 
 - It is an invisible vanilla light block that moves with the ship (waterlogged under water) and is removed when the engine stops or the ship is picked up.
 
 ### Radar
-- **What it detects:** all ores by default *(config: list of block tags)*.
-- **Display:** top-down. A large group of ores shows as a bright point and a small deposit as a faint one. An up or down arrow on a point shows that the ore is above or below the ship.
-- **Range:** 64 / 128 / 256 blocks radius *(config, per tier)*.
-- **Scan rate:** once a minute, or slower if that's still too expensive. The scanning animation can run faster.
+The radar comes from radar modules in the module panels and shows on the driver's HUD as a compass line. There is one radar, and it is cumulative: each radar module installed raises its tier, up to 3 (more change nothing).
+
+| Tier | Modules | Finds | Within | Shows |
+|--|--|--|--|--|
+| I | 1 | Metals: iron, copper, gold, ancient debris, other metals (any other ore in `c:ores`, e.g. other mods' tin or lead) | 24 blocks | Where the deposits lie, and whether they are above or below the ship |
+| II | 2 | Every ore: also coal, redstone, lapis, diamond, emerald, quartz | 32 blocks | Also the distance to the nearest one |
+| III | 3 | Every ore | 48 blocks | Also its exact height in blocks, creatures, vessels, hostiles and players on the line (within 48 blocks, 16 up or down), and on water the depth under the ship and the distance to the shore ahead |
+
+Distances are measured from the drillhead's middle; ores are found up to half the range above or below it.
+- **Target:** the radar looks for one kind of ore at a time. The driver cycles it with the "Radar target" key (R by default), or with ◀ ▶ on any module panel. Only kinds the tier finds come up; if the tier drops, a kind it can no longer find falls back to iron.
+- **The line:** at the top of the screen, between the readouts and the attitude indicator (under the attitude indicator when the window is too narrow), like Fallout's compass. It scrolls with the heading across half a turn: N, E, S, W bright, the points between dim, ticks every 15°, and a caret over the heading. The four nearest deposits of the target show as diamonds in its colour where they lie, the nearest bigger and brighter, with an arrow above it if the ore is more than 2 blocks higher than the ship and below it if lower. When the nearest is outside the line, a chevron at the edge shows which way to turn. At tier III, contacts show as short coloured ticks (creatures cyan, vessels white, hostiles red, players yellow).
+- **Readouts** under the line: the target and, from tier II, the distance to the nearest deposit, then its height (▲, ▼ or =; at tier III ▲12, ▼3...); the radar's tier and the target key. At tier III a second line: depth and shore ("DPT 12M SHR 30M", "OPEN" with no shore in 64 blocks, or "LAND"), and how many hostiles are around, in red when there are any.
+- **Scanning:** server side, from loaded chunks only, never the ship itself or its riders. Contacts and water are measured twice a second; the ore scan reads a few chunk sections a tick (about 50,000 blocks, skipping sections without the target), and the HUD shows the last complete sweep, shifted as the ship moves. Changing the target starts a new sweep (under a second).
 
 ---
 
 ## 7. Wagons
 
-- Wagons follow the drillhead's path like train cars: both ends of a wagon ride on the path the drillhead travelled, with a 0.5-block gap between sections. When the drillhead reverses, the wagons are pushed back along the same path.
-- Wagons ride through the tunnel the drillhead dug and don't collide with blocks themselves. Turning the drillhead in place doesn't move them.
+- Wagons follow the drillhead's path like train cars: the path is traced by the drillhead's centre at half its height, and both ends of a wagon's centre line ride on it, with a gap of 1 / 2 / 3 blocks between sections (per tier), bridged by bellows. Joining at half height (rather than at the bottom) lets sections bend up or down about 38° before their ends touch, instead of about 15°. When the drillhead reverses, the wagons are pushed back along the same path.
+- Wagons ride through the tunnel the drillhead dug and don't collide with blocks themselves. Turning the drillhead in place doesn't move them, and it stops turning at the joint limit (see Driving).
 - A wagon must be the same tier as its ship. The limit is 3 / 5 / 8 wagons per tier.
-- **Interior:** an empty room (no fixtures, no lamp), joined to the section in front of it by a 1 × 2 passage. Players can also enter a wagon directly by right-clicking its exterior.
+- **Interior:** an empty room with its own door (no other fixtures, no lamp). Rooms are spaced by the same gap as the sections outside (1 / 2 / 3 blocks), and each wagon is joined to the section in front of it by a passage of 1 × 2 / 3 × 3 / 5 × 4 blocks (w × h, from the floor up) that cuts through both walls and crosses the gap. Across the gap the passage is lined with bellows blocks on its sides and ceiling over a hull floor: the inside of the accordion that joins the sections outside. Detaching requires the room and the passage to be empty.
 - **Adding:** craft a wagon item and put it in the status panel's wagon slot. It needs free space behind the last section; otherwise a "something is blocking the wagon" message is shown and the item stays in the slot.
 - **Removing:** only the last wagon can be detached, so the chain never has gaps. It must be empty (no blocks or entities inside). The wagon item goes back to the player and the passage is sealed.
 - **Inventory:** wagons don't add inventory slots. Players extend storage themselves with inventory access modules and pipes.
@@ -215,6 +249,18 @@ Modules are fixtures installed into the hull from the inside:
 | Hatch | An exit (e.g. through the roof or floor). Can't be locked. |
 | Tesla turret (small / medium) | See below. |
 | Ship locator | Works like a compass: points to the last ship used. |
+
+### Module panels
+Modules aren't blocks: they plug into module panels in the drillhead's left wall (the side without the door), at eye level beside the cockpit, from the front back. There is one more panel per tier: 1 / 2 / 3. Each panel has four bays, one module per bay.
+- **Using a panel** opens its four bays, laid out as on the wall, above the player's inventory, plus what all the ship's modules add up to: the radar's tier and ore range with its target (◀ ▶ to change it), and the radio with its station (◀ ▶ to tune). Any panel sets the same radar and radio.
+- **On the wall** each module shows as a faceplate standing a pixel proud of its bay: a green scope for the radar, a speaker grille and dial for the radio, the dial lit while it plays.
+- **Outside** the radar shows as a pod under the nose and a search coil under the tail, the radio as an antenna.
+- **Picking up the ship** gives the modules back along with the ship.
+
+| Module | Use | Outside | Recipe |
+|--|--|--|--|
+| Radar | The driver's radar (section 6). Cumulative: each module, up to three, raises its tier. | A pod under the nose and a search coil under the tail | Copper, compass, glass panes, redstone, prismarine shard |
+| Radio | Tuned from a module panel: off, FM Tumbera 98.7 (the mod's own track), then five vanilla music discs (cat, blocks, chirp, mall, pigstep). It plays at the panel holding the ship's first radio, and from the drillhead outside, loud enough to hear about 24 blocks away. One is enough; more change nothing. Taking the last one out switches it off. Going in or out of the ship (the game cuts every sound when it changes dimension) or a full sound engine never leaves it silent: the station starts again within half a second. | A whip antenna folded back along the roof (the tunnel leaves no room for a mast) | Copper, amethyst shard, note block, redstone |
 
 ### Tesla turrets
 - **Placement:** roof only, in the middle of a wagon or the drillhead. Each section can have at most one turret.
@@ -454,27 +500,90 @@ Textures and sounds are supplied by the author. Missing assets use vanilla place
 ### Textures in use
 | Texture | Used by |
 |--|--|
-| `hull` | Interior walls and the exterior hull |
+| `hull_00`..`hull_11` | Interior walls: the exterior's painted plating, one panel per 2 × 2 blocks, paired from the floor up |
+| `hull_floor` | Floor: steel tread plate, like the roof outside |
+| `hull_ceiling` | Ceiling: gunmetal panels with a vent |
+| `hull_frame` | Beams in the vertical corners of every room |
+| `hull_skirt` | Kick plate along the bottom row of the walls, with hazard stripes (the rubbing strip outside) |
+| `hull_conduit` | Steel and amber pipes along the top row of the walls, in rooms 4 or more blocks tall inside |
+| `bellows` | Passage lining between sections (the inside of the exterior bellows) |
+| `hull_lamp` | Ceiling lamp: the headlights' lens |
+| `exterior/*` | The exterior model (see below) |
 | `periscope` | Helm |
 | `status` | Status panel. It has no separate warning texture; the panel lights up instead (this may change later). |
 | `engine_off` / `engine_on` | Generator, idle / burning |
 | `inventory_io` | Storage access |
 | `crafting_module` | Built-in crafting table |
-| `door_bottom` / `door_top` | Door, lower / upper half |
+| `door_bottom` / `door_top` | Door, lower / upper half: the same art as the exterior door |
+| `cockpit_seat` | Driver's chair: dark quilted leather with red piping, and the joysticks' red knobs |
+| `cockpit_desk_top` / `cockpit_console_top` | The slanted tops of the desk (displays and keys) and the side consoles (gauges and levers) |
+| `cockpit_console_side` | Desk and console bodies: gunmetal with a red stripe, vents and LEDs |
+| `cockpit_screen` / `cockpit_telemetry` | Front wall screens: radar repeater / telemetry trace and meters |
+| `cockpit_glass` | Cockpit glazing: a gunmetal frame around a tinted, see-through pane (translucent) |
+| `bulkhead` | The header over cockpit openings: a gunmetal beam with hazard stripes along its foot |
+| `module_panel` / `module_faces` | Module panel with four bays / the faceplates of the radar and the radio (off and on) |
+
+The chair, desk and consoles are block models with elements (the desk and console tops tilted 22.5°); the pod's roof and lamp reuse `exterior/roof`, `exterior/trim`, `hull_ceiling` and `hull_lamp`. Module items have their own icons (`textures/item/radar_module`, `radio_module`).
 
 **Ready for later features:** `furnace_off`/`furnace_on`, `alloy_furnace_off`/`alloy_furnace_on`, `energyio`, `hatch`.
 
-**Still placeholders:** all item textures, the hull lamp, the drill and exterior model, and the GUI screens, which are drawn without textures.
+### Exterior model
+The exterior is a procedural model built in code from each section's size (`client/model/SectionModel`), so all three tiers and future longer sections share one design. Faces are cut on a 1-block grid, so textures keep 16 pixels per block at any size; body plating uses 2 × 2-block panels.
+
+- **Everything stays inside the tunnel's cross-section.** The body is inset 1/8 block on the sides and 3/8 on the roof, leaving room for the tracks, door, rails, lamps and stacks without anything leaving the tunnel the drill cuts.
+- **Body:** a box with 45° bevels along the top edges, sitting on two tracks (1 block high) with a belly plate between them. Ends narrow by the tier's taper so coupled sections can bend; the taper never cuts into the interior room.
+- **Coherent with the interior:**
+
+| Exterior part | Interior counterpart |
+|--|--|
+| Sliding door on the right side, third block from the back, 2 blocks high | The interior door |
+| Periscope housing on the roof's front | The helm |
+| Exhaust stack on the right bevel, third block from the front (smokes while burning) | The generator |
+| Coupling mouths and bellows | The passage to the next section |
+
+- **Other parts:** drill housing (hazard-striped ring), headlights in the front bevel corners (glow while the engine runs), roof beacon (flashes while a warning is lit), roof rails, a ladder ahead of the door, side ribs every third block, a rubbing strip over the tracks, roof hatch and side vents on wagons, a roll-up shutter on closed couplings.
+- **Animated:** the drill spins; road wheels turn and track belts run with the distance driven; the door slides back along the hull (opening is wired in a later step); the bellows follow both sections every frame, folding and bending.
+- **Drill:** round cutter plate with carbide teeth on its rim and a cone (1.35 × its radius long) wrapped in three spiral flights, as wide as the body. It looks rusty when worn. The cone sticks out ahead of the drill zone, which is purely visual.
+
+Per tier (from `ShipTier.Coupling`):
+
+| | Basic | Standard | Hardened |
+|--|--|--|--|
+| Gap between sections (bellows length) | 1 | 2 | 3 |
+| Passage (w × h) | 1 × 2 | 3 × 3 | 5 × 4 |
+| End taper | 1.0 | 1.25 | 1.5 |
+| Track width | 1.25 | 1.54 | 2.42 |
+
+**Textures** (`textures/block/exterior/`): `plate_00`..`plate_11` (one 2 × 2 panel), `roof`, `trim`, `belly`, `track_belt`, `track_side`, `wheel`, `hazard`, `door_lower`, `door_upper`, `glass`, `lamp`, `lamp_on`, `beacon`, `beacon_on`, `pipe`, `soot`, `vent`, `hatch`, `bellows`, `shutter`, `drill_steel`, `drill_plate`, `drill_tooth`. One palette: painted red-orange plating, gunmetal trim, steel roof and drill, hazard yellow, amber doors matching the interior door.
+
+**Still placeholders:** all item textures and the GUI screens, which are drawn without textures. The fixtures keep the author's art, recoloured from the old red to the exterior's paint.
 
 ### Sounds
 All four are mono, so they fade with distance. Stereo originals are kept in `art-source/sounds/`.
 
 | Sound | When |
 |--|--|
-| `engine_idle` | Loops while someone is driving, the ship has energy, and it isn't moving |
-| `engine_working` | Loops while the engine is on and the ship moves. It crossfades with idle. |
-| `engine_stop` | Plays once when the engine turns off (the driver leaves or energy runs out) |
-| `digging` | Loops while the drill spins |
+| `engine_idle` | Loops at 35% volume while someone is driving, the ship has energy, and it isn't moving (heard up to 16 blocks) |
+| `engine_working` | Loops at 50% while the engine is on and the ship moves, pitched up to 15% higher at top speed. It crossfades with idle. |
+| `engine_stop` | Plays once at 50% when the engine turns off (the driver leaves or energy runs out) |
+| `digging` | Loops at 55% only while the drill is actually cutting blocks, not while it spins in the air |
+
+The driver, inside the hull in first person, hears the loops at 60%. A big drill breaks many blocks at once, so only 2 per tick play their vanilla break sound (and 10 more just throw dust); the rest break quietly, which keeps the sound engine from running out of channels.
+
+Vanilla sounds used: iron door open/close for the sliding doors, a low anvil thud when landing from a real fall, chain place/break when a wagon is coupled or uncoupled.
+
+**Music:** `music/cumbia_del_taladro` ("Cumbia del Taladro", the radio's FM Tumbera station) is an original instrumental synthesized from scratch by `art-source/music/CumbiaDelTaladro.java`: a cumbia section (keyboard lead with vibrato and echo, guiro, timbal, cowbell, bass) and an RKT section (dembow beat, 808 bass), mastered like a car stereo pushed too far. 48 seconds at 100 bpm, looping seamlessly; mono OGG Vorbis encoded with ffmpeg. Players can replace it, or add their own, with a resource pack.
+
+### Particles
+Spawned on the client, at the exterior model's positions:
+
+| Effect | When |
+|--|--|
+| Smoke from the exhaust stack | While the generator burns: light puffs when idle, thick smoke while moving or cutting |
+| Chips of the block being cut, thrown back and out | While the drill cuts; sparks off rock with hardness 3 or more |
+| Bubbles at the drill | While the drill spins under water |
+| Dust from the ground behind the tracks | While any section rolls over solid ground |
+| A burst of ground dust | Landing from a real fall (server-side, seen by everyone) |
 
 ---
 
@@ -489,10 +598,17 @@ All four are mono, so they fade with distance. Stereo originals are kept in `art
    - Chunk loading and pickup.
    - Basic-tier recipes.
 2. **Wagons, headlights and driver HUD: done.**
+2b. **Redesign (in progress on `feature/drill-model`):**
+   - A. Procedural exterior model and textures for all tiers, bellows, animated tracks: **done.**
+   - B. Interiors coherent with the exterior: **done.** Door-based entering/exiting with the door animating and cutting a way out, wagon doors, passages sized per tier and lined with bellows, interior gap matching the exterior, collision parts, interior textures in the exterior's palette (hull plating, door, lamp, recoloured fixtures); items and tag-based recipes for the standard and hardened tiers (bronze/brass and steel/diamond, craftable once another mod provides those tags; available in the creative tab meanwhile).
+   - C. Physics: **done.** Falling, and levelling out on the surface instead of staying pointed at the sky; the path at half height; joint checks so sections never cross. Gametests (run in game with `/test runall`): `levelsoutonthesurface`, `keepsitsanglewhiledrilling`, `wagonlimitsturninginplace`.
+   - D. Particles and sounds: **done.** Exhaust smoke, drill chips and sparks, bubbles, track dust, landing dust; quieter loops, digging only while cutting, engine pitch with speed, muffled for the driver, capped break sounds, landing thud and coupling sounds.
+   - E. Comfort modules for the bigger tiers: **done.** Radio with stations and its original track (see section 8).
+   - F. Module panels, radar and cockpit: **done.** Modules plug into module panels (1 / 2 / 3 per tier, four bays each) instead of being blocks; the sonar and metal detector became one radar, a compass line on the driver's HUD with a chosen target ore and height arrows, whose tier (up to 3) is how many radar modules are installed; a cockpit per tier with a modelled chair, desk, consoles, screens and glazing (see sections 6 and 8). Gametest: `radarmodulesaddup`.
 3. **Modules and wrench.**
 4. **Tesla turrets.**
 5. **Standard and hardened tiers, materials and alloys.**
-6. **Radar and ore deposits.**
+6. **Ore deposits** (the radar is done, see 2b F).
 7. **Filters and barrels.**
 8. **Mouse steering through the periscope.**
 

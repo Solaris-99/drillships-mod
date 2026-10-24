@@ -1,6 +1,7 @@
 package com.solaris99.drillship.gametest;
 
 import com.solaris99.drillship.Drillships;
+import com.solaris99.drillship.block.ModulePanelBlock;
 import com.solaris99.drillship.entity.DrillshipEntity;
 import com.solaris99.drillship.entity.WagonEntity;
 import com.solaris99.drillship.item.DrillshipItem;
@@ -10,7 +11,10 @@ import com.solaris99.drillship.registry.ModComponents;
 import com.solaris99.drillship.registry.ModItems;
 import com.solaris99.drillship.registry.ModKeys;
 import com.solaris99.drillship.ship.InteriorLayout;
+import com.solaris99.drillship.ship.RadarOre;
 import com.solaris99.drillship.ship.ShipManager;
+import com.solaris99.drillship.ship.ShipModule;
+import com.solaris99.drillship.ship.ShipRadar;
 import com.solaris99.drillship.ship.ShipState;
 import com.solaris99.drillship.ship.ShipTier;
 import com.solaris99.drillship.ship.ShipTravel;
@@ -23,11 +27,14 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.items.IItemHandlerModifiable;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -74,6 +81,36 @@ public class DrillshipTests {
         });
     }
 
+    // Physics: out in the open a tilted ship falls and levels out onto its tracks; in terrain it keeps its angle.
+
+    @GameTest(template = TEMPLATE, timeoutTicks = 200)
+    public static void levelsOutOnTheSurface(GameTestHelper helper) {
+        floor(helper);
+        ShipState ship = place(helper, ORIGIN.add(0, 3, 0));
+        DrillshipEntity entity = entity(helper, ship);
+        entity.moveTo(entity.getX(), entity.getY(), entity.getZ(), 0.0F, -30.0F);
+        helper.succeedWhen(() -> {
+            double y = relative(helper, entity.position()).y;
+            helper.assertTrue(Math.abs(entity.getXRot()) < 1.0E-3 && Math.abs(y - 1.0) < 1.0E-3,
+                    "The ship should rest level on the floor, but is at y=" + y + " pitched " + entity.getXRot());
+            remove(helper, ship);
+        });
+    }
+
+    @GameTest(template = TEMPLATE, timeoutTicks = 100)
+    public static void keepsItsAngleWhileDrilling(GameTestHelper helper) {
+        floor(helper);
+        wall(helper, Blocks.STONE, 10, 13);
+        ShipState ship = place(helper, ORIGIN);
+        DrillshipEntity entity = entity(helper, ship);
+        entity.moveTo(entity.getX(), entity.getY(), entity.getZ(), 0.0F, -20.0F);
+        helper.runAfterDelay(60, () -> {
+            helper.assertTrue(Math.abs(entity.getXRot() + 20.0F) < 1.0E-3, "A drill in the rock should hold the angle, but pitch is " + entity.getXRot());
+            remove(helper, ship);
+            helper.succeed();
+        });
+    }
+
     @GameTest(template = TEMPLATE, timeoutTicks = 200)
     public static void wrongTierMinesWithoutDrops(GameTestHelper helper) {
         floor(helper);
@@ -114,11 +151,54 @@ public class DrillshipTests {
         assertBlock(helper, interior, layout.generator(), ModBlocks.GENERATOR.get());
         assertBlock(helper, interior, layout.storage(), ModBlocks.SHIP_STORAGE.get());
         assertBlock(helper, interior, layout.crafting(), ModBlocks.SHIP_CRAFTING.get());
-        assertBlock(helper, interior, layout.doorLower(), ModBlocks.SHIP_DOOR.get());
-        assertBlock(helper, interior, layout.origin(), ModBlocks.HULL.get());
+        assertBlock(helper, interior, layout.doorLower(0), ModBlocks.SHIP_DOOR.get());
+        assertBlock(helper, interior, layout.origin(), ModBlocks.HULL_FLOOR.get());
+        assertBlock(helper, interior, layout.chair(), ModBlocks.COCKPIT_CHAIR.get());
+        for (InteriorLayout.CockpitPart part : layout.cockpit()) {
+            helper.assertTrue(ModBlocks.isBuiltIn(interior.getBlockState(part.pos())), "Cockpit part missing at " + part.pos());
+        }
+        helper.assertTrue(layout.modulePanels().size() == ShipTier.BASIC.modulePanels(), "The basic drillhead has one module panel");
+        for (BlockPos panel : layout.modulePanels()) {
+            assertBlock(helper, interior, panel, ModBlocks.MODULE_PANEL.get());
+        }
         helper.assertTrue(interior.getBlockState(BlockPos.containing(layout.entryPoint())).isAir(), "Entry point should be free");
+        helper.assertTrue(interior.getBlockState(BlockPos.containing(layout.helmPoint())).isAir(), "Where the driver gets up should be free");
         remove(helper, ship);
         helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE)
+    public static void radarModulesAddUp(GameTestHelper helper) {
+        floor(helper);
+        ShipState ship = place(helper, ORIGIN);
+        IItemHandlerModifiable modules = ship.modules();
+        helper.assertTrue(modules.getSlots() == ShipState.MODULES_PER_PANEL, "One panel of four bays");
+        helper.assertTrue(!modules.isItemValid(0, new ItemStack(Items.COAL)), "Only modules go into a panel");
+        modules.setStackInSlot(0, ModItems.module(ShipModule.RADAR));
+        helper.assertTrue(ship.radarTier() == 1, "One radar module: tier 1");
+        ship.cycleRadarTarget(-1);
+        helper.assertTrue(ship.radarTarget() == RadarOre.OTHER_METAL, "Tier 1 cycles through metals only");
+        modules.setStackInSlot(1, ModItems.module(ShipModule.RADAR));
+        modules.setStackInSlot(3, ModItems.module(ShipModule.RADIO));
+        helper.assertTrue(ship.moduleCount(ShipModule.RADAR) == 2 && ship.radarTier() == 2, "Two radar modules: tier 2");
+        ship.cycleRadarTarget(1);
+        helper.assertTrue(ship.radarTarget() == RadarOre.COAL, "Tier 2 finds every ore");
+        modules.setStackInSlot(1, ItemStack.EMPTY);
+        helper.assertTrue(ship.radarTarget() == RadarOre.IRON, "Back at tier 1, an ore it can't find falls back to iron");
+        modules.setStackInSlot(1, ModItems.module(ShipModule.RADAR));
+        helper.assertTrue(ShipRadar.tier(5) == ShipRadar.MAX_TIER, "The tier stops at 3");
+        helper.assertTrue(ShipRadar.oreRange(3) > ShipRadar.oreRange(2) && ShipRadar.oreRange(2) > ShipRadar.oreRange(1), "Each tier reaches further");
+        ship.setRadioStation(1);
+        helper.assertTrue(ship.radioStation() == 1, "The radio tunes");
+        modules.setStackInSlot(3, ItemStack.EMPTY);
+        helper.assertTrue(ship.radioStation() == 0, "Taking the radio out switches it off");
+        helper.succeedWhen(() -> {
+            helper.assertTrue(entity(helper, ship).modules() == ShipModule.RADAR.bit(), "The exterior shows the radar");
+            ServerLevel interior = helper.getLevel().getServer().getLevel(ModKeys.INTERIOR);
+            BlockState panel = interior.getBlockState(ship.layout().modulePanels().get(0));
+            helper.assertTrue(panel.getValue(ModulePanelBlock.BAYS.get(1)) == ModulePanelBlock.Bay.RADAR, "The panel shows its modules");
+            remove(helper, ship);
+        });
     }
 
     @GameTest(template = TEMPLATE)
@@ -137,18 +217,22 @@ public class DrillshipTests {
         floor(helper);
         ShipState ship = place(helper, ORIGIN);
         ship.fuelSlot().setStackInSlot(0, ItemStack.EMPTY);
+        ship.modules().setStackInSlot(2, ModItems.module(ShipModule.RADAR));
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
         ShipTravel.enterShip(player, ship);
         ShipTravel.pickUp(player, ship);
 
         helper.assertTrue(ShipManager.get(helper.getLevel().getServer()).get(ship.id()) == null, "Ship should be gone");
         ItemStack item = ItemStack.EMPTY;
+        boolean radar = false;
         for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
             if (player.getInventory().getItem(i).is(ModItems.BASIC_DRILLSHIP.get())) {
                 item = player.getInventory().getItem(i);
             }
+            radar |= player.getInventory().getItem(i).is(ModItems.RADAR_MODULE.get());
         }
         helper.assertTrue(!item.isEmpty(), "Player should get the drillship item back");
+        helper.assertTrue(radar, "Player should get the modules back");
         helper.assertTrue(item.get(ModComponents.INSTALLED_DRILL.get()).copyOne().is(ModItems.BASIC_DRILL.get()), "The drill should be stored in the item");
         helper.succeed();
     }
@@ -170,11 +254,32 @@ public class DrillshipTests {
             WagonEntity wagon = ShipWagons.findEntity(helper.getLevel().getServer(), ship, 1);
             helper.assertTrue(wagon != null, "The wagon's exterior should exist");
             helper.assertTrue(drillhead.getZ() - LONG_ORIGIN.z - helper.absoluteVec(Vec3.ZERO).z > 5, "The drillhead should have moved forward");
-            // Drillhead half length 3.5 + gap 0.5 + wagon half length 4.5.
+            // Drillhead half length + coupling gap + wagon half length.
+            ShipTier tier = ShipTier.BASIC;
+            double expected = tier.drillheadExteriorLength() / 2.0 + tier.coupling().gap() + tier.wagonExteriorLength() / 2.0;
             double gap = drillhead.getZ() - wagon.getZ();
-            helper.assertTrue(Math.abs(gap - 8.5) < 0.6, "The wagon should trail 8.5 blocks behind, but trails " + gap);
+            helper.assertTrue(Math.abs(gap - expected) < 0.6, "The wagon should trail " + expected + " blocks behind, but trails " + gap);
             helper.assertTrue(Math.abs(wagon.getX() - drillhead.getX()) < 0.01 && Math.abs(wagon.getYRot()) < 0.01,
                     "The wagon should be lined up behind the drillhead");
+            remove(helper, ship);
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = LONG_TEMPLATE, timeoutTicks = 100)
+    public static void wagonLimitsTurningInPlace(GameTestHelper helper) {
+        floor(helper, 15, 48);
+        ShipState ship = place(helper, LONG_ORIGIN);
+        attach(helper, ship);
+        drive(helper, ship);
+        DrillshipEntity drillhead = entity(helper, ship);
+        drillhead.setInput(0.0F, 1.0F, false, false);
+        helper.runAfterDelay(60, () -> {
+            WagonEntity wagon = ShipWagons.findEntity(helper.getLevel().getServer(), ship, 1);
+            helper.assertTrue(wagon != null, "The wagon's exterior should exist");
+            float bend = Math.abs(Mth.wrapDegrees(drillhead.getYRot() - wagon.getYRot()));
+            float limit = ShipTier.BASIC.coupling().maxBend();
+            helper.assertTrue(bend > limit - 3 && bend <= limit + 0.5F, "Turning in place should stop at " + limit + " degrees, but bent " + bend);
             remove(helper, ship);
             helper.succeed();
         });
@@ -207,7 +312,7 @@ public class DrillshipTests {
         ServerLevel interior = helper.getLevel().getServer().getLevel(ModKeys.INTERIOR);
         for (BlockPos pos : ship.layout().passage(1)) {
             if (ship.layout().room(0).contains(pos)) {
-                assertBlock(helper, interior, pos, ModBlocks.HULL.get());
+                helper.assertTrue(ModBlocks.isShell(interior.getBlockState(pos)), "The passage should be sealed at " + pos);
             } else {
                 helper.assertTrue(interior.getBlockState(pos).isAir(), "The wagon room should be cleared");
             }
@@ -263,7 +368,8 @@ public class DrillshipTests {
     private static void assertWagonRoom(GameTestHelper helper, ShipState ship, int wagon) {
         ServerLevel interior = helper.getLevel().getServer().getLevel(ModKeys.INTERIOR);
         InteriorLayout.Room room = ship.layout().room(wagon);
-        assertBlock(helper, interior, room.origin(), ModBlocks.HULL.get());
+        assertBlock(helper, interior, room.origin(), ModBlocks.HULL_FLOOR.get());
+        assertBlock(helper, interior, ship.layout().doorLower(wagon), ModBlocks.SHIP_DOOR.get());
         helper.assertTrue(interior.getBlockState(BlockPos.containing(room.entryPoint())).isAir(), "The wagon room should be empty inside");
         for (BlockPos pos : ship.layout().passage(wagon)) {
             helper.assertTrue(interior.getBlockState(pos).isAir(), "The passage to the wagon should be open at " + pos);

@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "HTH",
+    "H H",
+    "HTH"
+  ],
+  "key": {
+    "H": {
+      "item": "drillships:standard_hull"
+    },
+    "T": {
+      "item": "drillships:standard_tread"
+    }
+  },
+  "result": {
+    "id": "drillships:standard_wagon",
+    "count": 1
+  }
+}
