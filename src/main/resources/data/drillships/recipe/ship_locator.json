@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "minecraft:compass"
+    },
+    {
+      "item": "drillships:module_base"
+    }
+  ],
+  "result": {
+    "id": "drillships:ship_locator",
+    "count": 1
+  }
+}

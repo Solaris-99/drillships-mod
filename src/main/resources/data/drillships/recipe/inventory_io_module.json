@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "minecraft:hopper"
+    },
+    {
+      "tag": "c:chests/wooden"
+    },
+    {
+      "item": "drillships:module_base"
+    }
+  ],
+  "result": {
+    "id": "drillships:inventory_io_module",
+    "count": 1
+  }
+}

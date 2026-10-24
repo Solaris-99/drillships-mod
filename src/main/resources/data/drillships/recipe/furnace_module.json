@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "minecraft:furnace"
+    },
+    {
+      "item": "drillships:module_base"
+    }
+  ],
+  "result": {
+    "id": "drillships:furnace_module",
+    "count": 1
+  }
+}

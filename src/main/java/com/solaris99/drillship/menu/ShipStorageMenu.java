@@ -13,92 +13,58 @@ import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.items.IItemHandlerModifiable;
-import net.neoforged.neoforge.items.ItemHandlerHelper;
-import net.neoforged.neoforge.items.ItemStackHandler;
-import net.neoforged.neoforge.items.SlotItemHandler;
 
-/**
- * The ship's inventory, shown one page of 54 slots at a time. The page and the inventory's size, which changes with its
- * inventory upgrades, are synced to the client as data slots. The client holds only the page on screen, slot for slot:
- * a page's contents may arrive before its number, so they mustn't depend on it.
- */
+/** The ship's inventory, one page at a time (see InventoryPage). Opened by the storage access and the inventory access module. */
 public class ShipStorageMenu extends AbstractContainerMenu {
     public static final int BUTTON_PREVIOUS = 0;
     public static final int BUTTON_NEXT = 1;
-    public static final int ROWS = 6;
-    public static final int PAGE_SIZE = ROWS * 9;
+    public static final int ROWS = InventoryPage.ROWS;
+    public static final int PAGE_SIZE = InventoryPage.SIZE;
     public static final int GRID_TOP = 18;
     public static final int INVENTORY_Y = GRID_TOP + ROWS * ShipMenus.SLOT_SIZE + 14;
 
     @Nullable
     private final ShipState ship;
     private final BlockPos fixture;
-    private final IItemHandlerModifiable storage;
-    private final DataSlot page = DataSlot.standalone();
-    private final DataSlot size;
+    private final InventoryPage page;
 
     public static void open(ServerPlayer player, ShipState ship, BlockPos fixture) {
-        player.openMenu(new SimpleMenuProvider((id, inventory, p) -> new ShipStorageMenu(id, inventory, ship, fixture, ship.inventory()),
+        player.openMenu(new SimpleMenuProvider((id, inventory, p) -> new ShipStorageMenu(id, inventory, ship, fixture, new InventoryPage(ship.inventory())),
                 Component.translatable("container.drillships.storage")), buf -> {
                     buf.writeBlockPos(fixture);
-                    buf.writeVarInt(ship.inventory().getSlots());
+                    InventoryPage.write(buf, ship.inventory());
                 });
     }
 
     public ShipStorageMenu(int id, Inventory inventory, RegistryFriendlyByteBuf buf) {
-        this(id, inventory, null, buf.readBlockPos(), new ItemStackHandler(PAGE_SIZE));
-        size.set(buf.readVarInt());
+        this(id, inventory, null, buf.readBlockPos(), new InventoryPage(buf));
     }
 
-    private ShipStorageMenu(int id, Inventory inventory, @Nullable ShipState ship, BlockPos fixture, IItemHandlerModifiable storage) {
+    private ShipStorageMenu(int id, Inventory inventory, @Nullable ShipState ship, BlockPos fixture, InventoryPage page) {
         super(ModMenus.SHIP_STORAGE.get(), id);
         this.ship = ship;
         this.fixture = fixture;
-        this.storage = storage;
-        this.size = ship == null ? DataSlot.standalone() : new DataSlot() {
-            @Override
-            public int get() {
-                return storage.getSlots();
-            }
-
-            @Override
-            public void set(int value) {
-            }
-        };
-
-        PageView view = new PageView();
-        for (int row = 0; row < ROWS; row++) {
-            for (int col = 0; col < 9; col++) {
-                addSlot(new SlotItemHandler(view, col + row * 9, 8 + col * ShipMenus.SLOT_SIZE, GRID_TOP + row * ShipMenus.SLOT_SIZE) {
-                    @Override
-                    public boolean isActive() {
-                        return view.toStorage(getContainerSlot()) >= 0;
-                    }
-                });
-            }
-        }
+        this.page = page;
+        page.addSlots(this::addSlot, 8, GRID_TOP);
         ShipMenus.addPlayerInventory(this::addSlot, inventory, INVENTORY_Y);
-        addDataSlot(page);
-        addDataSlot(size);
+        page.addDataSlots(this::addDataSlot);
     }
 
     public int page() {
-        return page.get();
+        return page.page();
     }
 
     public int pageCount() {
-        return Math.max(1, (size.get() + PAGE_SIZE - 1) / PAGE_SIZE);
+        return page.pageCount();
     }
 
     @Override
     public boolean clickMenuButton(Player player, int id) {
         switch (id) {
-            case BUTTON_PREVIOUS -> page.set(Math.max(0, page.get() - 1));
-            case BUTTON_NEXT -> page.set(Math.min(pageCount() - 1, page.get() + 1));
+            case BUTTON_PREVIOUS -> page.turn(-1);
+            case BUTTON_NEXT -> page.turn(1);
             default -> {
                 return false;
             }
@@ -119,8 +85,7 @@ public class ShipStorageMenu extends AbstractContainerMenu {
                 return ItemStack.EMPTY;
             }
         } else {
-            // Into any page, not just the visible one.
-            ItemStack left = ItemHandlerHelper.insertItemStacked(storage, stack.copy(), false);
+            ItemStack left = page.store(stack.copy());
             if (left.getCount() == stack.getCount()) {
                 return ItemStack.EMPTY;
             }
@@ -137,60 +102,5 @@ public class ShipStorageMenu extends AbstractContainerMenu {
     @Override
     public boolean stillValid(Player player) {
         return ShipMenus.stillValid(player, ship, fixture);
-    }
-
-    /** The visible page of the ship's inventory. Slots past the end of the inventory are empty and inactive. */
-    private class PageView implements IItemHandlerModifiable {
-        // On the client the storage is the page itself.
-        int toStorage(int slot) {
-            int index = page.get() * PAGE_SIZE + slot;
-            if (index >= size.get()) {
-                return -1;
-            }
-            return ship == null ? slot : index;
-        }
-
-        @Override
-        public int getSlots() {
-            return PAGE_SIZE;
-        }
-
-        @Override
-        public ItemStack getStackInSlot(int slot) {
-            int index = toStorage(slot);
-            return index >= 0 ? storage.getStackInSlot(index) : ItemStack.EMPTY;
-        }
-
-        @Override
-        public void setStackInSlot(int slot, ItemStack stack) {
-            int index = toStorage(slot);
-            if (index >= 0) {
-                storage.setStackInSlot(index, stack);
-            }
-        }
-
-        @Override
-        public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
-            int index = toStorage(slot);
-            return index >= 0 ? storage.insertItem(index, stack, simulate) : stack;
-        }
-
-        @Override
-        public ItemStack extractItem(int slot, int amount, boolean simulate) {
-            int index = toStorage(slot);
-            return index >= 0 ? storage.extractItem(index, amount, simulate) : ItemStack.EMPTY;
-        }
-
-        @Override
-        public int getSlotLimit(int slot) {
-            int index = toStorage(slot);
-            return index >= 0 ? storage.getSlotLimit(index) : 0;
-        }
-
-        @Override
-        public boolean isItemValid(int slot, ItemStack stack) {
-            int index = toStorage(slot);
-            return index >= 0 && storage.isItemValid(index, stack);
-        }
     }
 }

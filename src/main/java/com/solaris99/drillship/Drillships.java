@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
 import com.solaris99.drillship.event.CommonEvents;
 import com.solaris99.drillship.network.ModNetwork;
+import com.solaris99.drillship.registry.ModBlockEntities;
 import com.solaris99.drillship.registry.ModBlocks;
 import com.solaris99.drillship.registry.ModComponents;
 import com.solaris99.drillship.registry.ModCreativeTabs;
@@ -30,6 +31,7 @@ public class Drillships {
     public Drillships(IEventBus modEventBus, ModContainer modContainer) {
         ModBlocks.BLOCKS.register(modEventBus);
         ModItems.ITEMS.register(modEventBus);
+        ModBlockEntities.BLOCK_ENTITIES.register(modEventBus);
         ModComponents.COMPONENTS.register(modEventBus);
         ModEntities.ENTITIES.register(modEventBus);
         ModMenus.MENUS.register(modEventBus);
@@ -38,6 +40,7 @@ public class Drillships {
 
         modEventBus.addListener(ModNetwork::register);
         modEventBus.addListener(ChunkLoading::registerControllers);
+        modEventBus.addListener(ModBlockEntities::registerCapabilities);
 
         ShipTicker.register(NeoForge.EVENT_BUS);
         CommonEvents.register(NeoForge.EVENT_BUS);

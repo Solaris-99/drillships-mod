@@ -49,7 +49,8 @@ public class StatusMenu extends AbstractContainerMenu {
     public static final int FLAGS = 13;
     public static final int WAGONS = 14;
     public static final int MAX_WAGONS = 15;
-    private static final int DATA_COUNT = 16;
+    public static final int ENERGY_USE = 16;
+    private static final int DATA_COUNT = 17;
 
     public static final int FLAG_DRILL_ON = 1;
     public static final int FLAG_AUTO_FUEL = 1 << 1;
@@ -60,7 +61,7 @@ public class StatusMenu extends AbstractContainerMenu {
     public static final int FUEL_SLOT_Y = 52;
     public static final int WAGON_SLOT_X = 152;
     public static final int WAGON_SLOT_Y = 86;
-    public static final int INVENTORY_Y = 170;
+    public static final int INVENTORY_Y = 180;
 
     private static final int SHIP_SLOTS = 3;
 
@@ -129,6 +130,7 @@ public class StatusMenu extends AbstractContainerMenu {
             case FLAGS -> (ship.isDrillOn() ? FLAG_DRILL_ON : 0) | (ship.isAutoFuel() ? FLAG_AUTO_FUEL : 0);
             case WAGONS -> ship.wagonCount();
             case MAX_WAGONS -> ship.tier().maxWagons();
+            case ENERGY_USE -> ship.energyUse();
             default -> 0;
         };
     }

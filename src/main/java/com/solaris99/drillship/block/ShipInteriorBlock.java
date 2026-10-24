@@ -57,7 +57,7 @@ public class ShipInteriorBlock extends Block {
             case STATUS, GENERATOR -> StatusMenu.open(serverPlayer, ship, pos);
             case STORAGE -> ShipStorageMenu.open(serverPlayer, ship, pos);
             case CRAFTING -> serverPlayer.openMenu(new SimpleMenuProvider(
-                    (id, inventory, p) -> new ShipCraftingMenu(id, inventory, ContainerLevelAccess.create(level, pos)),
+                    (id, inventory, p) -> new ShipCraftingMenu(id, inventory, ContainerLevelAccess.create(level, pos), this),
                     Component.translatable("container.crafting")));
             case DOOR -> ShipTravel.exitSection(serverPlayer, ship, Math.max(0, ship.layout().sectionAt(pos)));
         }

@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " R ",
+    "RBR",
+    " R "
+  ],
+  "key": {
+    "R": {
+      "tag": "c:dusts/redstone"
+    },
+    "B": {
+      "item": "drillships:module_base"
+    }
+  },
+  "result": {
+    "id": "drillships:energy_io_module",
+    "count": 1
+  }
+}

@@ -87,6 +87,10 @@ public class ShipState {
     private long blockedUntil;
     // The antigravity engine didn't get its energy last tick, so gravity is back.
     private boolean antigravityStarved;
+    // FE drawn from the buffer this tick, and in each of the last second's ticks.
+    private int usedThisTick;
+    private final int[] used = new int[20];
+    private int usedIndex;
 
     ShipState(ShipManager manager, UUID id, ShipTier tier, int interiorIndex, ResourceKey<Level> dimension, Vec3 position, float yaw) {
         this.manager = manager;
@@ -550,13 +554,51 @@ public class ShipState {
         return energy;
     }
 
+    /** Adds up to {@code max} FE to the buffer, as far as it has room. Returns how much went in. */
+    public int receiveEnergy(int max, boolean simulate) {
+        int accepted = Math.max(0, Math.min(max, tier.energyCapacity() - energy));
+        if (!simulate && accepted > 0) {
+            energy += accepted;
+            manager.setDirty();
+        }
+        return accepted;
+    }
+
+    /** Takes up to {@code max} FE out of the buffer. Returns how much came out. */
+    public int extractEnergy(int max, boolean simulate) {
+        int extracted = Math.max(0, Math.min(max, energy));
+        if (!simulate && extracted > 0) {
+            energy -= extracted;
+            usedThisTick += extracted;
+            manager.setDirty();
+        }
+        return extracted;
+    }
+
     public boolean consumeEnergy(int amount) {
         if (energy < amount) {
             return false;
         }
         energy -= amount;
+        usedThisTick += amount;
         manager.setDirty();
         return true;
+    }
+
+    /** Closes the tick's tally of what was drawn from the buffer. */
+    public void recordEnergyUse() {
+        used[usedIndex] = usedThisTick;
+        usedIndex = (usedIndex + 1) % used.length;
+        usedThisTick = 0;
+    }
+
+    /** FE per tick drawn from the buffer, averaged over the last second: machines, movement, drill, upgrades, modules. */
+    public int energyUse() {
+        long total = 0;
+        for (int amount : used) {
+            total += amount;
+        }
+        return (int) Math.round(total / (double) used.length);
     }
 
     public int burnTime() {

@@ -100,6 +100,7 @@ public class StatusScreen extends AbstractContainerScreen<StatusMenu> {
         lines.add(menu.get(StatusMenu.BURN_TIME) > 0
                 ? Component.translatable("gui.drillships.generating", menu.get(StatusMenu.GENERATION))
                 : Component.translatable("gui.drillships.idle"));
+        lines.add(Component.translatable("gui.drillships.energy_use", menu.get(StatusMenu.ENERGY_USE)));
         lines.add(Component.translatable("gui.drillships.fuel", duration(menu.get(StatusMenu.FUEL_SECONDS))));
         int max = menu.get(StatusMenu.DRILL_MAX);
         lines.add(max > 0

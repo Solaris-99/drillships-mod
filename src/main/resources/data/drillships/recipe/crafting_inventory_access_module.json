@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "minecraft:crafting_table"
+    },
+    {
+      "tag": "c:chests/wooden"
+    },
+    {
+      "item": "drillships:module_base"
+    }
+  ],
+  "result": {
+    "id": "drillships:crafting_inventory_access_module",
+    "count": 1
+  }
+}

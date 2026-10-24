@@ -1,8 +1,13 @@
 package com.solaris99.drillship.registry;
 
+import java.util.function.Supplier;
+
 import com.solaris99.drillship.Drillships;
+import com.solaris99.drillship.block.ModuleBlock;
 import com.solaris99.drillship.item.DrillItem;
 import com.solaris99.drillship.item.DrillshipItem;
+import com.solaris99.drillship.item.ModuleItem;
+import com.solaris99.drillship.item.ShipLocatorItem;
 import com.solaris99.drillship.item.UpgradeItem;
 import com.solaris99.drillship.item.WagonItem;
 import com.solaris99.drillship.ship.ShipTier;
@@ -73,6 +78,24 @@ public final class ModItems {
     public static final DeferredItem<UpgradeItem> INVENTORY_UPGRADE = ITEMS.register("inventory_upgrade",
             () -> new UpgradeItem(ShipUpgrade.INVENTORY, new Item.Properties().stacksTo(16)));
 
+    // Modules for the hull (see ShipModules), the module base they're crafted from, the wrench that takes them out
+    // and the ship locator.
+    public static final DeferredItem<Item> MODULE_BASE = ITEMS.registerSimpleItem("module_base");
+    public static final DeferredItem<Item> WRENCH = ITEMS.registerSimpleItem("wrench", new Item.Properties().stacksTo(1));
+    public static final DeferredItem<ModuleItem> CRAFTING_MODULE = module("crafting_module", ModBlocks.CRAFTING_MODULE, ModuleItem.Placement.WALL);
+    public static final DeferredItem<ModuleItem> CRAFTING_INVENTORY_ACCESS_MODULE = module("crafting_inventory_access_module",
+            ModBlocks.CRAFTING_INVENTORY_ACCESS_MODULE, ModuleItem.Placement.WALL);
+    public static final DeferredItem<ModuleItem> INVENTORY_ACCESS_MODULE = module("inventory_access_module", ModBlocks.INVENTORY_ACCESS_MODULE,
+            ModuleItem.Placement.WALL);
+    public static final DeferredItem<ModuleItem> INVENTORY_IO_MODULE = module("inventory_io_module", ModBlocks.INVENTORY_IO_MODULE,
+            ModuleItem.Placement.WALL);
+    public static final DeferredItem<ModuleItem> FURNACE_MODULE = module("furnace_module", ModBlocks.FURNACE_MODULE, ModuleItem.Placement.WALL);
+    public static final DeferredItem<ModuleItem> ENERGY_IO_MODULE = module("energy_io_module", ModBlocks.ENERGY_IO_MODULE, ModuleItem.Placement.WALL);
+    public static final DeferredItem<ModuleItem> DOOR_MODULE = module("door_module", ModBlocks.DOOR_MODULE, ModuleItem.Placement.DOOR);
+    public static final DeferredItem<ModuleItem> HATCH_MODULE = module("hatch_module", ModBlocks.HATCH_MODULE, ModuleItem.Placement.HATCH);
+    public static final DeferredItem<ShipLocatorItem> SHIP_LOCATOR = ITEMS.register("ship_locator",
+            () -> new ShipLocatorItem(new Item.Properties().stacksTo(1)));
+
     // Upgrades used to be called modules.
     static {
         ITEMS.addAlias(Drillships.id("radar_module"), Drillships.id("radar_upgrade"));
@@ -87,6 +110,11 @@ public final class ModItems {
             case ANTIGRAVITY -> ANTIGRAVITY_UPGRADE.get();
             case INVENTORY -> INVENTORY_UPGRADE.get();
         });
+    }
+
+    private static DeferredItem<ModuleItem> module(String name, Supplier<? extends ModuleBlock> block,
+            ModuleItem.Placement placement) {
+        return ITEMS.register(name, () -> new ModuleItem(block, placement, new Item.Properties().stacksTo(16)));
     }
 
     public static ItemStack newDrill(ShipTier tier) {

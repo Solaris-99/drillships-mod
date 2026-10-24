@@ -1,6 +1,10 @@
 package com.solaris99.drillship.registry;
 
 import com.solaris99.drillship.Drillships;
+import com.solaris99.drillship.menu.CraftingStorageMenu;
+import com.solaris99.drillship.menu.EnergyIoMenu;
+import com.solaris99.drillship.menu.FurnaceModuleMenu;
+import com.solaris99.drillship.menu.InventoryIoMenu;
 import com.solaris99.drillship.menu.ShipStorageMenu;
 import com.solaris99.drillship.menu.StatusMenu;
 import com.solaris99.drillship.menu.UpgradePanelMenu;
@@ -20,6 +24,15 @@ public final class ModMenus {
             () -> IMenuTypeExtension.create(ShipStorageMenu::new));
     public static final DeferredHolder<MenuType<?>, MenuType<UpgradePanelMenu>> UPGRADE_PANEL = MENUS.register("upgrade_panel",
             () -> IMenuTypeExtension.create(UpgradePanelMenu::new));
+
+    public static final DeferredHolder<MenuType<?>, MenuType<CraftingStorageMenu>> CRAFTING_STORAGE = MENUS.register("crafting_storage",
+            () -> IMenuTypeExtension.create(CraftingStorageMenu::new));
+    public static final DeferredHolder<MenuType<?>, MenuType<InventoryIoMenu>> INVENTORY_IO = MENUS.register("inventory_io",
+            () -> IMenuTypeExtension.create(InventoryIoMenu::new));
+    public static final DeferredHolder<MenuType<?>, MenuType<FurnaceModuleMenu>> FURNACE_MODULE = MENUS.register("furnace_module",
+            () -> IMenuTypeExtension.create(FurnaceModuleMenu::new));
+    public static final DeferredHolder<MenuType<?>, MenuType<EnergyIoMenu>> ENERGY_IO = MENUS.register("energy_io",
+            () -> IMenuTypeExtension.create(EnergyIoMenu::new));
 
     private ModMenus() {
     }
