@@ -182,10 +182,10 @@ public final class ShipTravel {
         }
         player.closeContainer();
         player.teleportTo(level, exit.x, exit.y, exit.z, ship.yaw(), 0.0F);
-        List<ItemStack> modules = ship.takeModules();
+        List<ItemStack> upgrades = ship.takeUpgrades();
         dismantle(player.server, ship);
         player.getInventory().placeItemBackInInventory(DrillshipItem.create(ship.tier(), ship.drill().copy()));
-        modules.forEach(player.getInventory()::placeItemBackInInventory);
+        upgrades.forEach(player.getInventory()::placeItemBackInInventory);
     }
 
     /** Removes a ship from the world entirely: exterior, interior, chunk tickets and saved state. */

@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "CBC",
+    "RFR",
+    "CPC"
+  ],
+  "key": {
+    "C": { "tag": "c:ingots/copper" },
+    "B": { "tag": "c:rods/blaze" },
+    "R": { "tag": "c:storage_blocks/redstone" },
+    "F": { "item": "minecraft:furnace" },
+    "P": { "item": "minecraft:piston" }
+  },
+  "result": { "id": "drillships:engine_overdrive_upgrade", "count": 1 }
+}

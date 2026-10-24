@@ -16,7 +16,7 @@ import net.minecraft.util.Mth;
  * below when they are higher or lower than the ship; the nearest one sticks to the edge when it is behind. Under the
  * line: the target with, from tier 2, its distance and, at tier 3, its exact height; tier 3 also puts creatures and
  * hostiles on the line and shows the water's depth and the shore ahead. It shows the latest {@link RadarScan}; with
- * no radar module none arrive and it stays hidden.
+ * no radar upgrade none arrive and it stays hidden.
  */
 final class RadarHud {
     private static final int MAX_WIDTH = 220;

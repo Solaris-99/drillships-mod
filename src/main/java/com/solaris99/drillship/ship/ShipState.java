@@ -8,12 +8,14 @@ import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
+import com.solaris99.drillship.Config;
 import com.solaris99.drillship.entity.DrillshipEntity;
 import com.solaris99.drillship.item.DrillItem;
-import com.solaris99.drillship.item.ModuleItem;
+import com.solaris99.drillship.item.UpgradeItem;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.NonNullList;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -42,7 +44,7 @@ public class ShipState {
     public static final int WARN_DRILL_BROKEN = 1 << 5;
     public static final int WARN_BLOCKED = 1 << 6;
 
-    public static final int MODULES_PER_PANEL = 4;
+    public static final int UPGRADES_PER_PANEL = 4;
 
     // How long transient warnings stay lit after the last time they happened.
     private static final int WARNING_TICKS = 100;
@@ -53,7 +55,7 @@ public class ShipState {
     private final UUID id;
     private final ShipTier tier;
     private final int interiorIndex;
-    private final ItemStackHandler inventory;
+    private final Storage inventory;
     private final ItemStackHandler fuel;
     private final ItemStackHandler drill;
 
@@ -67,11 +69,11 @@ public class ShipState {
     private boolean drillOn;
     private boolean autoFuel = true;
     private int wagonCount;
-    // The modules in the panels, four per panel, the radio's station (0 for off) and what the radar looks for.
-    private final ItemStackHandler modules;
+    // The upgrades in the panels, four per panel, the radio's station (0 for off) and what the radar looks for.
+    private final ItemStackHandler upgrades;
     private int radioStation;
     private RadarOre radarTarget = RadarOre.IRON;
-    // Set when the modules or the station change, so the panels inside get redrawn.
+    // Set when the upgrades or the station change, so the panels inside get redrawn.
     private boolean panelsChanged = true;
     // Positions of the drillhead's centre at half its height, oldest first.
     private final List<Vec3> path = new ArrayList<>();
@@ -83,6 +85,8 @@ public class ShipState {
     private double speed;
     private long inventoryFullUntil;
     private long blockedUntil;
+    // The antigravity engine didn't get its energy last tick, so gravity is back.
+    private boolean antigravityStarved;
 
     ShipState(ShipManager manager, UUID id, ShipTier tier, int interiorIndex, ResourceKey<Level> dimension, Vec3 position, float yaw) {
         this.manager = manager;
@@ -92,22 +96,28 @@ public class ShipState {
         this.dimension = dimension;
         this.position = position;
         this.yaw = yaw;
-        this.inventory = handler(tier.inventorySlots(), stack -> true);
+        this.inventory = new Storage(tier.inventorySlots());
         this.fuel = handler(1, stack -> stack.getBurnTime(RecipeType.SMELTING) > 0);
         this.drill = handler(1, stack -> stack.getItem() instanceof DrillItem);
-        this.modules = new ItemStackHandler(tier.modulePanels() * MODULES_PER_PANEL) {
+        this.upgrades = new ItemStackHandler(tier.upgradePanels() * UPGRADES_PER_PANEL) {
             @Override
             protected void onContentsChanged(int slot) {
-                if (!hasModule(ShipModule.RADIO)) {
+                if (!hasUpgrade(ShipUpgrade.RADIO)) {
                     radioStation = 0;
                 }
+                resizeInventory();
                 panelsChanged = true;
                 manager.setDirty();
             }
 
             @Override
+            public ItemStack extractItem(int slot, int amount, boolean simulate) {
+                return canRemoveUpgrade(slot) ? super.extractItem(slot, amount, simulate) : ItemStack.EMPTY;
+            }
+
+            @Override
             public boolean isItemValid(int slot, ItemStack stack) {
-                return stack.getItem() instanceof ModuleItem;
+                return stack.getItem() instanceof UpgradeItem;
             }
 
             @Override
@@ -129,6 +139,27 @@ public class ShipState {
                 return valid.test(stack);
             }
         };
+    }
+
+    /** The ship's inventory, which grows and shrinks with its inventory upgrades, keeping what it holds. */
+    private class Storage extends ItemStackHandler {
+        Storage(int size) {
+            super(size);
+        }
+
+        void resize(int size) {
+            NonNullList<ItemStack> resized = NonNullList.withSize(size, ItemStack.EMPTY);
+            for (int slot = 0; slot < Math.min(size, stacks.size()); slot++) {
+                resized.set(slot, stacks.get(slot));
+            }
+            stacks = resized;
+            manager.setDirty();
+        }
+
+        @Override
+        protected void onContentsChanged(int slot) {
+            manager.setDirty();
+        }
     }
 
     public UUID id() {
@@ -178,50 +209,93 @@ public class ShipState {
         manager.setDirty();
     }
 
-    // Modules
+    // Upgrades
 
-    /** The module panels' slots: panel {@code p} holds slots {@code 4p} to {@code 4p + 3}. */
-    public IItemHandlerModifiable modules() {
-        return modules;
+    /** The upgrade panels' slots: panel {@code p} holds slots {@code 4p} to {@code 4p + 3}. */
+    public IItemHandlerModifiable upgrades() {
+        return upgrades;
     }
 
-    /** The module in a slot, or null when it is empty. */
+    /** The upgrade in a slot, or null when it is empty. */
     @Nullable
-    public ShipModule moduleAt(int slot) {
-        return modules.getStackInSlot(slot).getItem() instanceof ModuleItem item ? item.module() : null;
+    public ShipUpgrade upgradeAt(int slot) {
+        return upgrades.getStackInSlot(slot).getItem() instanceof UpgradeItem item ? item.upgrade() : null;
     }
 
-    public int moduleCount(ShipModule module) {
+    public int upgradeCount(ShipUpgrade upgrade) {
         int count = 0;
-        for (int slot = 0; slot < modules.getSlots(); slot++) {
-            if (moduleAt(slot) == module) {
+        for (int slot = 0; slot < upgrades.getSlots(); slot++) {
+            if (upgradeAt(slot) == upgrade) {
                 count++;
             }
         }
         return count;
     }
 
-    public boolean hasModule(ShipModule module) {
-        return moduleCount(module) > 0;
+    public boolean hasUpgrade(ShipUpgrade upgrade) {
+        return upgradeCount(upgrade) > 0;
     }
 
-    /** The kinds of module installed, as ShipModule bits: they show on the exterior. */
-    public int moduleMask() {
+    /** How many of an upgrade take effect: as many as are installed, up to its limit. */
+    public int effectiveUpgrades(ShipUpgrade upgrade) {
+        return upgrade.effective(upgradeCount(upgrade));
+    }
+
+    /** An inventory upgrade can only come out while the slots it adds, the last ones, are empty. */
+    public boolean canRemoveUpgrade(int slot) {
+        if (upgradeAt(slot) != ShipUpgrade.INVENTORY) {
+            return true;
+        }
+        for (int i = inventory.getSlots() - ShipUpgrade.INVENTORY_SLOTS; i < inventory.getSlots(); i++) {
+            if (!inventory.getStackInSlot(i).isEmpty()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** Top speed in blocks per second: the tier's, raised by each engine overdrive. */
+    public double topSpeed() {
+        return tier.topSpeed() * (1 + ShipUpgrade.OVERDRIVE_SPEED_BONUS * effectiveUpgrades(ShipUpgrade.ENGINE_OVERDRIVE));
+    }
+
+    /** How much faster than normal the ship gains and sheds speed, with each engine overdrive. */
+    public double accelerationFactor() {
+        return 1 + ShipUpgrade.OVERDRIVE_ACCELERATION_BONUS * effectiveUpgrades(ShipUpgrade.ENGINE_OVERDRIVE);
+    }
+
+    /** FE per tick while moving: the configured cost plus each engine overdrive's. */
+    public int moveEnergy() {
+        return Config.MOVE_ENERGY.get() + ShipUpgrade.OVERDRIVE_MOVE_ENERGY * effectiveUpgrades(ShipUpgrade.ENGINE_OVERDRIVE);
+    }
+
+    /** Gravity is off: an antigravity engine is installed and got its energy last tick. */
+    public boolean isFloating() {
+        return hasUpgrade(ShipUpgrade.ANTIGRAVITY) && !antigravityStarved;
+    }
+
+    /** The upgrades' running costs, drawn every tick whether or not anyone is aboard. */
+    public void tickUpgrades() {
+        antigravityStarved = hasUpgrade(ShipUpgrade.ANTIGRAVITY) && !consumeEnergy(ShipUpgrade.ANTIGRAVITY_ENERGY);
+    }
+
+    /** The kinds of upgrade installed, as ShipUpgrade bits: they show on the exterior. */
+    public int upgradeMask() {
         int mask = 0;
-        for (int slot = 0; slot < modules.getSlots(); slot++) {
-            ShipModule module = moduleAt(slot);
-            mask |= module == null ? 0 : module.bit();
+        for (int slot = 0; slot < upgrades.getSlots(); slot++) {
+            ShipUpgrade upgrade = upgradeAt(slot);
+            mask |= upgrade == null ? 0 : upgrade.bit();
         }
         return mask;
     }
 
     /** Empties the panels, returning what was in them. */
-    public List<ItemStack> takeModules() {
+    public List<ItemStack> takeUpgrades() {
         List<ItemStack> taken = new ArrayList<>();
-        for (int slot = 0; slot < modules.getSlots(); slot++) {
-            if (!modules.getStackInSlot(slot).isEmpty()) {
-                taken.add(modules.getStackInSlot(slot));
-                modules.setStackInSlot(slot, ItemStack.EMPTY);
+        for (int slot = 0; slot < upgrades.getSlots(); slot++) {
+            if (!upgrades.getStackInSlot(slot).isEmpty()) {
+                taken.add(upgrades.getStackInSlot(slot));
+                upgrades.setStackInSlot(slot, ItemStack.EMPTY);
             }
         }
         return taken;
@@ -233,14 +307,14 @@ public class ShipState {
 
     /** Tunes the radio; without one it stays off. */
     public void setRadioStation(int station) {
-        radioStation = hasModule(ShipModule.RADIO) ? station : 0;
+        radioStation = hasUpgrade(ShipUpgrade.RADIO) ? station : 0;
         panelsChanged = true;
         manager.setDirty();
     }
 
-    /** The radar's tier: one per radar module installed, up to ShipRadar.MAX_TIER; 0 without a radar. */
+    /** The radar's tier: one per radar upgrade installed, up to ShipRadar.MAX_TIER; 0 without a radar. */
     public int radarTier() {
-        return ShipRadar.tier(moduleCount(ShipModule.RADAR));
+        return ShipRadar.tier(upgradeCount(ShipUpgrade.RADAR));
     }
 
     /** What the radar looks for. A kind the radar's tier can't find falls back to iron. */
@@ -254,7 +328,7 @@ public class ShipState {
         manager.setDirty();
     }
 
-    /** The modules or the station changed since the panels inside last showed them. */
+    /** The upgrades or the station changed since the panels inside last showed them. */
     public boolean panelsChanged() {
         return panelsChanged;
     }
@@ -394,6 +468,22 @@ public class ShipState {
 
     public IItemHandlerModifiable inventory() {
         return inventory;
+    }
+
+    /** The tier's slots plus each inventory upgrade's. */
+    public int inventorySlots() {
+        return tier.inventorySlots() + ShipUpgrade.INVENTORY_SLOTS * effectiveUpgrades(ShipUpgrade.INVENTORY);
+    }
+
+    /** What the inventory grows to with an inventory upgrade in every bay. */
+    public int maxInventorySlots() {
+        return tier.inventorySlots() + ShipUpgrade.INVENTORY_SLOTS * upgrades.getSlots();
+    }
+
+    private void resizeInventory() {
+        if (inventory.getSlots() != inventorySlots()) {
+            inventory.resize(inventorySlots());
+        }
     }
 
     public IItemHandlerModifiable fuelSlot() {
@@ -583,7 +673,7 @@ public class ShipState {
         tag.putBoolean("DrillOn", drillOn);
         tag.putBoolean("AutoFuel", autoFuel);
         tag.putInt("Wagons", wagonCount);
-        tag.put("Modules", modules.serializeNBT(registries));
+        tag.put("Upgrades", upgrades.serializeNBT(registries));
         tag.putInt("RadioStation", radioStation);
         tag.putString("RadarTarget", radarTarget.name());
         ListTag pathTag = new ListTag();
@@ -630,12 +720,14 @@ public class ShipState {
         ship.inventory.deserializeNBT(registries, tag.getCompound("Inventory"));
         ship.fuel.deserializeNBT(registries, tag.getCompound("Fuel"));
         ship.drill.deserializeNBT(registries, tag.getCompound("Drill"));
-        // Ships saved before the panels kept their modules as bits; those modules are gone.
-        if (tag.contains("Modules", Tag.TAG_COMPOUND)) {
-            CompoundTag modulesTag = tag.getCompound("Modules");
-            modulesTag.remove("Size");
-            ship.modules.deserializeNBT(registries, modulesTag);
+        // Upgrades used to be called modules. Ships saved before the panels kept them as bits; those are gone.
+        String upgradesKey = tag.contains("Upgrades", Tag.TAG_COMPOUND) ? "Upgrades" : "Modules";
+        if (tag.contains(upgradesKey, Tag.TAG_COMPOUND)) {
+            CompoundTag upgradesTag = tag.getCompound(upgradesKey);
+            upgradesTag.remove("Size");
+            ship.upgrades.deserializeNBT(registries, upgradesTag);
         }
+        ship.resizeInventory();
         return ship;
     }
 }

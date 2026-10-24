@@ -1,9 +1,9 @@
 package com.solaris99.drillship.registry;
 
 import com.solaris99.drillship.Drillships;
-import com.solaris99.drillship.menu.ModulePanelMenu;
 import com.solaris99.drillship.menu.ShipStorageMenu;
 import com.solaris99.drillship.menu.StatusMenu;
+import com.solaris99.drillship.menu.UpgradePanelMenu;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.inventory.MenuType;
@@ -18,8 +18,8 @@ public final class ModMenus {
             () -> IMenuTypeExtension.create(StatusMenu::new));
     public static final DeferredHolder<MenuType<?>, MenuType<ShipStorageMenu>> SHIP_STORAGE = MENUS.register("ship_storage",
             () -> IMenuTypeExtension.create(ShipStorageMenu::new));
-    public static final DeferredHolder<MenuType<?>, MenuType<ModulePanelMenu>> MODULE_PANEL = MENUS.register("module_panel",
-            () -> IMenuTypeExtension.create(ModulePanelMenu::new));
+    public static final DeferredHolder<MenuType<?>, MenuType<UpgradePanelMenu>> UPGRADE_PANEL = MENUS.register("upgrade_panel",
+            () -> IMenuTypeExtension.create(UpgradePanelMenu::new));
 
     private ModMenus() {
     }

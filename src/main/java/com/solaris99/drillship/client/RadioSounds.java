@@ -3,7 +3,7 @@ package com.solaris99.drillship.client;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.solaris99.drillship.block.ModulePanelBlock;
+import com.solaris99.drillship.block.UpgradePanelBlock;
 import com.solaris99.drillship.entity.DrillshipEntity;
 import com.solaris99.drillship.registry.ModBlocks;
 import com.solaris99.drillship.registry.ModKeys;
@@ -22,7 +22,7 @@ import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.LevelChunkSection;
 
 /**
- * Plays the radio's station: at the module panel holding it, near the player inside a ship, and from the outside of every
+ * Plays the radio's station: at the upgrade panel holding it, near the player inside a ship, and from the outside of every
  * drillship whose radio is on, loud enough for the neighbours. Each loop stops by itself when its radio is retuned,
  * switched off or gone.
  */
@@ -83,7 +83,7 @@ public final class RadioSounds {
                         continue;
                     }
                     LevelChunkSection section = chunk.getSection(index);
-                    if (section.hasOnlyAir() || !section.maybeHas(state -> state.is(ModBlocks.MODULE_PANEL.get()))) {
+                    if (section.hasOnlyAir() || !section.maybeHas(state -> state.is(ModBlocks.UPGRADE_PANEL.get()))) {
                         continue;
                     }
                     for (BlockPos pos : BlockPos.betweenClosed(cx << 4, sy << 4, cz << 4, (cx << 4) + 15, (sy << 4) + 15, (cz << 4) + 15)) {
@@ -104,10 +104,10 @@ public final class RadioSounds {
 
     private static int station(ClientLevel level, BlockPos pos) {
         var state = level.getBlockState(pos);
-        return state.is(ModBlocks.MODULE_PANEL.get()) ? state.getValue(ModulePanelBlock.STATION) : 0;
+        return state.is(ModBlocks.UPGRADE_PANEL.get()) ? state.getValue(UpgradePanelBlock.STATION) : 0;
     }
 
-    /** A station looping at a module panel, or following a drillship outside. */
+    /** A station looping at an upgrade panel, or following a drillship outside. */
     private static final class Loop extends AbstractTickableSoundInstance {
         private final ClientLevel level;
         private final BlockPos pos;

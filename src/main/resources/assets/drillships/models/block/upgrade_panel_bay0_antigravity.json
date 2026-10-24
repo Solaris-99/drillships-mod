@@ -1,0 +1,15 @@
+{
+  "textures": { "face": "drillships:block/upgrade_faces", "particle": "drillships:block/upgrade_panel" },
+  "elements": [
+    {
+      "from": [-1, 9, 1], "to": [0, 15, 7],
+      "faces": {
+        "west": { "uv": [11, 0, 14, 3], "texture": "#face" },
+        "up": { "uv": [6, 0, 6.5, 3], "texture": "#face" },
+        "down": { "uv": [6, 0, 6.5, 3], "texture": "#face" },
+        "north": { "uv": [6, 0, 6.5, 3], "texture": "#face" },
+        "south": { "uv": [6, 0, 6.5, 3], "texture": "#face" }
+      }
+    }
+  ]
+}

@@ -21,7 +21,10 @@ import net.neoforged.neoforge.items.ItemHandlerHelper;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import net.neoforged.neoforge.items.SlotItemHandler;
 
-/** The ship's inventory, shown one page of 54 slots at a time. The page is synced to the client as a data slot. */
+/**
+ * The ship's inventory, shown one page of 54 slots at a time. The page and the inventory's size, which changes with its
+ * inventory upgrades, are synced to the client as data slots.
+ */
 public class ShipStorageMenu extends AbstractContainerMenu {
     public static final int BUTTON_PREVIOUS = 0;
     public static final int BUTTON_NEXT = 1;
@@ -35,12 +38,13 @@ public class ShipStorageMenu extends AbstractContainerMenu {
     private final BlockPos fixture;
     private final IItemHandlerModifiable storage;
     private final DataSlot page = DataSlot.standalone();
+    private final DataSlot size;
 
     public static void open(ServerPlayer player, ShipState ship, BlockPos fixture) {
         player.openMenu(new SimpleMenuProvider((id, inventory, p) -> new ShipStorageMenu(id, inventory, ship, fixture, ship.inventory()),
                 Component.translatable("container.drillships.storage")), buf -> {
                     buf.writeBlockPos(fixture);
-                    buf.writeVarInt(ship.inventory().getSlots());
+                    buf.writeVarInt(ship.maxInventorySlots());
                 });
     }
 
@@ -53,6 +57,16 @@ public class ShipStorageMenu extends AbstractContainerMenu {
         this.ship = ship;
         this.fixture = fixture;
         this.storage = storage;
+        this.size = ship == null ? DataSlot.standalone() : new DataSlot() {
+            @Override
+            public int get() {
+                return storage.getSlots();
+            }
+
+            @Override
+            public void set(int value) {
+            }
+        };
 
         PageView view = new PageView();
         for (int row = 0; row < ROWS; row++) {
@@ -67,6 +81,7 @@ public class ShipStorageMenu extends AbstractContainerMenu {
         }
         ShipMenus.addPlayerInventory(this::addSlot, inventory, INVENTORY_Y);
         addDataSlot(page);
+        addDataSlot(size);
     }
 
     public int page() {
@@ -74,7 +89,7 @@ public class ShipStorageMenu extends AbstractContainerMenu {
     }
 
     public int pageCount() {
-        return Math.max(1, (storage.getSlots() + PAGE_SIZE - 1) / PAGE_SIZE);
+        return Math.max(1, (size.get() + PAGE_SIZE - 1) / PAGE_SIZE);
     }
 
     @Override
@@ -126,7 +141,7 @@ public class ShipStorageMenu extends AbstractContainerMenu {
     private class PageView implements IItemHandlerModifiable {
         int toStorage(int slot) {
             int index = page.get() * PAGE_SIZE + slot;
-            return index < storage.getSlots() ? index : -1;
+            return index < size.get() ? index : -1;
         }
 
         @Override

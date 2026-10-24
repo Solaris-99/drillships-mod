@@ -5,8 +5,8 @@ import java.util.Map;
 
 import com.solaris99.drillship.block.CockpitBlock;
 import com.solaris99.drillship.block.HullPanelBlock;
-import com.solaris99.drillship.block.ModulePanelBlock;
 import com.solaris99.drillship.block.ShipDoorBlock;
+import com.solaris99.drillship.block.UpgradePanelBlock;
 import com.solaris99.drillship.registry.ModBlocks;
 
 import net.minecraft.core.BlockPos;
@@ -38,8 +38,8 @@ public final class Interiors {
             level.setBlock(part.pos(), cockpitBlock(layout, part), FLAGS);
         }
         level.setBlock(layout.chair(), ModBlocks.COCKPIT_CHAIR.get().defaultBlockState().setValue(CockpitBlock.FACING, Direction.SOUTH), FLAGS);
-        for (BlockPos panel : layout.modulePanels()) {
-            level.setBlock(panel, ModBlocks.MODULE_PANEL.get().defaultBlockState(), FLAGS);
+        for (BlockPos panel : layout.upgradePanels()) {
+            level.setBlock(panel, ModBlocks.UPGRADE_PANEL.get().defaultBlockState(), FLAGS);
         }
         placeDoor(level, layout, 0);
     }
@@ -63,23 +63,23 @@ public final class Interiors {
     }
 
     /**
-     * Shows each module panel's modules, and the radio's station on the panel holding the first radio, where it is
+     * Shows each upgrade panel's upgrades, and the radio's station on the panel holding the first radio, where it is
      * heard inside. Returns false, changing nothing, while the panels aren't loaded.
      */
-    public static boolean showModules(ServerLevel level, InteriorLayout layout, ShipState ship) {
-        List<BlockPos> panels = layout.modulePanels();
+    public static boolean showUpgrades(ServerLevel level, InteriorLayout layout, ShipState ship) {
+        List<BlockPos> panels = layout.upgradePanels();
         if (panels.isEmpty() || !level.isLoaded(panels.get(0))) {
             return false;
         }
         int radioPanel = -1;
-        for (int slot = 0; slot < ship.modules().getSlots() && radioPanel < 0; slot++) {
-            if (ship.moduleAt(slot) == ShipModule.RADIO) {
-                radioPanel = slot / ShipState.MODULES_PER_PANEL;
+        for (int slot = 0; slot < ship.upgrades().getSlots() && radioPanel < 0; slot++) {
+            if (ship.upgradeAt(slot) == ShipUpgrade.RADIO) {
+                radioPanel = slot / ShipState.UPGRADES_PER_PANEL;
             }
         }
         for (int panel = 0; panel < panels.size(); panel++) {
             BlockState current = level.getBlockState(panels.get(panel));
-            if (current.getBlock() instanceof ModulePanelBlock block) {
+            if (current.getBlock() instanceof UpgradePanelBlock block) {
                 BlockState shown = block.showing(ship, panel, panel == radioPanel ? ship.radioStation() : 0);
                 if (shown != current) {
                     level.setBlock(panels.get(panel), shown, Block.UPDATE_CLIENTS);

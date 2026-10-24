@@ -11,7 +11,7 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 
 /**
- * What the radio module plays, in the order clicking it goes through them. FM Tumbera plays the mod's own track
+ * What the radio upgrade plays, in the order clicking it goes through them. FM Tumbera plays the mod's own track
  * ("Cumbia del Taladro", art-source/music); the others play vanilla music discs. Each station loops.
  */
 public enum RadioStation {

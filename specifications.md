@@ -22,7 +22,7 @@ This document is the source of truth for the mod's design. The README is a playe
 | Drillhead interior (w × h × l) | 3 × 3 × 5 | 5 × 5 × 7 | 9 × 9 × 9 |
 | Exterior cross-section (with hull) | 5 × 5 | 7 × 7 | 11 × 11 |
 | Max wagons | 3 | 5 | 8 |
-| Ship inventory (slots) | 100 | 150 | 200 |
+| Ship inventory (slots, before inventory upgrades) | 100 | 150 | 200 |
 | Top speed (blocks/s) | 8 | 10 | 12 |
 | Energy buffer (FE) | 1,000,000 | 2,000,000 | 5,000,000 |
 | Generator output (FE/t) | 240 | 480 | 1024 |
@@ -66,7 +66,7 @@ The hull is one block thick, so the exterior is the interior plus 2 in each dire
 | Steer left / right | A / D | |
 | Pitch up / down | Space / Left Ctrl | Limited to ±30° |
 | Drill | F | Toggle (press to start, press again to stop) or hold (spins while held), chosen in the controls panel |
-| Radar target | R | The next kind of ore for the radar to look for (with a radar module) |
+| Radar target | R | The next kind of ore for the radar to look for (with a radar upgrade) |
 | Leave the helm | Left Shift | |
 
 Every action can be bound to any key or mouse button, in the **controls panel** (the Controls button on the status panel) or in vanilla's key binds under "Drillships". The bindings are only live while driving, so they may share keys with anything done on foot: while driving, vanilla actions on the same keys are held back (a click bound to the drill doesn't also attack; Shift bound to pitching down doesn't also leave the helm, since leaving is whatever key "Leave the helm" is on). The panel shows two driving actions on the same key in red. The drill mode is a client setting (`drillships-client.toml`, `drillMode`).
@@ -83,7 +83,7 @@ While driving, a HUD styled like an old military terminal (green monospace text 
 - **Drill:** on/off and durability.
 - **Speed.**
 - **Warnings**, blinking: inventory full, no/low power, no drill, drill broken/worn, path blocked.
-- **Radar** (a compass line at the top), when the ship has radar modules (see section 6, Radar).
+- **Radar** (a compass line at the top), when the ship has radar upgrades (see section 6, Radar).
 
 *Later:* steering with the mouse through the periscope, with two modes. **Drive** mode, used while moving, limits the view to the front of the ship. **Free look** mode, only available while stopped, lets the player look around freely.
 
@@ -93,7 +93,8 @@ While driving, a HUD styled like an old military terminal (green monospace text 
 - **Levelling out:** out in the open (nothing in the drill zone) and with the driver not pitching, a tilted ship turns back to level, accelerating (0.25°/tick², up to 4°/tick), hinged on its front-most support (else its rear-most, else its middle). Coming out of a tunnel on the surface it drops its nose and settles on its tracks instead of staying pointed at the sky; after landing nose first, its back comes down. While still inside the tunnel, or resting on a slope, it can't turn and stays as it is. With the drill in terrain it keeps whatever angle it was drilling at.
 - **Coupled sections never cross:** before the drillhead turns, pitches, levels out or drives, the new pose is checked against the first wagon (and, when driving, every coupled pair at the poses the path would give them): if two neighbours would start overlapping, or the drillhead would bend more than 35° / 40° / 35° away from the first wagon, that motion doesn't happen and the "path blocked" warning lights. A joint already past its limit may always straighten out. Falling is never held back by the wagons.
 - **Fluids:** the ship drives through water and lava like any entity. Fluids never get into the interior.
-- **Energy:** moving costs 1 FE/t *(config)*. At 0 energy the ship stops and a warning lights up.
+- **Energy:** moving costs 1 FE/t *(config)*, plus 10 FE/t per engine overdrive. At 0 energy the ship stops and a warning lights up.
+- **Flight:** with a powered antigravity engine (section 8) there is no falling and no levelling out; the ship goes where it is driven.
 - **Chunk loading:** the chunks around each ship and its interior stay loaded *(config, default on)*.
 - **Multiplayer:** there's no permission system. Anyone can drive, one driver at a time, and other players can be inside doing other things.
 - **Dimensions:** ships work in any dimension they're placed in, including the Nether. Portals are ignored for now.
@@ -145,9 +146,9 @@ The drillhead is the only required section. Its built-in fixtures are fixed and 
 |--|--|
 | **Cockpit** | The driver's chair (sit down to drive), the desk and consoles around it (they open the status panel) and screens on the front wall, set apart from the rest of the cabin (see below). |
 | **Helm** | The periscope screen on the front wall, above the desk. Using it also starts driving. |
-| **Periscope** | Switches the player's camera to the front and center of the drill. Night vision may come as a module later. |
+| **Periscope** | Switches the player's camera to the front and center of the drill. Night vision may come as an upgrade later. |
 | **Status panel** | Readouts, warnings, drill slot, fuel slot, toggles. Lights up while any warning is active. |
-| **Module panels** | In the left wall, beside the cockpit: 1 / 2 / 3 per tier, four modules each (see section 8). |
+| **Upgrade panels** | In the left wall, beside the cockpit: 1 / 2 / 3 per tier, four upgrades each (see section 8). |
 | **Generator** | Burns fuel to produce FE. Lights up while burning. On the right wall, beside the cockpit, under the exhaust. |
 | **Storage access** | Opens the ship's inventory. On the left wall at the back, next to the crafting table, facing the door. |
 | **Crafting table** | A normal crafting table. |
@@ -159,9 +160,9 @@ The chair sits two blocks back from the front wall, with a desk across the cockp
 
 | Tier | Cabin (inside) | Cockpit |
 |--|--|--|
-| Basic | 3 × 3 × 5 | The front two rows: desk, chair and its two consoles fill the width, flanked by the generator and the module panel on the walls. No room for a partition. |
+| Basic | 3 × 3 × 5 | The front two rows: desk, chair and its two consoles fill the width, flanked by the generator and the upgrade panel on the walls. No room for a partition. |
 | Standard | 5 × 5 × 7 | The front two rows, behind a glazed bulkhead across the cabin: a kick plate, two rows of glass, a header with hazard stripes over a three-wide opening, and the wall pipes carried across above it. A lamp over the chair. |
-| Hardened | 9 × 9 × 9 | A glazed pod, three wide and three deep inside (desk, chair between its consoles, and a walkway behind), three high under its own roof and lamp, with posts at the back corners and a two-high door under a striped header. It leaves a bay on either side: the generator's on the right, the module panels' on the left. |
+| Hardened | 9 × 9 × 9 | A glazed pod, three wide and three deep inside (desk, chair between its consoles, and a walkway behind), three high under its own roof and lamp, with posts at the back corners and a two-high door under a striped header. It leaves a bay on either side: the generator's on the right, the upgrade panels' on the left. |
 
 The cockpit blocks are built in, like the hull; they don't stop the ship from being picked up.
 
@@ -195,16 +196,16 @@ The cockpit blocks are built in, like the hull; they don't stop the ship from be
 - It is an invisible vanilla light block that moves with the ship (waterlogged under water) and is removed when the engine stops or the ship is picked up.
 
 ### Radar
-The radar comes from radar modules in the module panels and shows on the driver's HUD as a compass line. There is one radar, and it is cumulative: each radar module installed raises its tier, up to 3 (more change nothing).
+The radar comes from radar upgrades in the upgrade panels and shows on the driver's HUD as a compass line. There is one radar, and it is cumulative: each radar upgrade installed raises its tier, up to 3 (more change nothing).
 
-| Tier | Modules | Finds | Within | Shows |
+| Tier | Upgrades | Finds | Within | Shows |
 |--|--|--|--|--|
 | I | 1 | Metals: iron, copper, gold, ancient debris, other metals (any other ore in `c:ores`, e.g. other mods' tin or lead) | 24 blocks | Where the deposits lie, and whether they are above or below the ship |
 | II | 2 | Every ore: also coal, redstone, lapis, diamond, emerald, quartz | 32 blocks | Also the distance to the nearest one |
 | III | 3 | Every ore | 48 blocks | Also its exact height in blocks, creatures, vessels, hostiles and players on the line (within 48 blocks, 16 up or down), and on water the depth under the ship and the distance to the shore ahead |
 
 Distances are measured from the drillhead's middle; ores are found up to half the range above or below it.
-- **Target:** the radar looks for one kind of ore at a time. The driver cycles it with the "Radar target" key (R by default), or with ◀ ▶ on any module panel. Only kinds the tier finds come up; if the tier drops, a kind it can no longer find falls back to iron.
+- **Target:** the radar looks for one kind of ore at a time. The driver cycles it with the "Radar target" key (R by default), or with ◀ ▶ on any upgrade panel. Only kinds the tier finds come up; if the tier drops, a kind it can no longer find falls back to iron.
 - **The line:** at the top of the screen, between the readouts and the attitude indicator (under the attitude indicator when the window is too narrow), like Fallout's compass. It scrolls with the heading across half a turn: N, E, S, W bright, the points between dim, ticks every 15°, and a caret over the heading. The four nearest deposits of the target show as diamonds in its colour where they lie, the nearest bigger and brighter, with an arrow above it if the ore is more than 2 blocks higher than the ship and below it if lower. When the nearest is outside the line, a chevron at the edge shows which way to turn. At tier III, contacts show as short coloured ticks (creatures cyan, vessels white, hostiles red, players yellow).
 - **Readouts** under the line: the target and, from tier II, the distance to the nearest deposit, then its height (▲, ▼ or =; at tier III ▲12, ▼3...); the radar's tier and the target key. At tier III a second line: depth and shore ("DPT 12M SHR 30M", "OPEN" with no shore in 64 blocks, or "LAND"), and how many hostiles are around, in red when there are any.
 - **Scanning:** server side, from loaded chunks only, never the ship itself or its riders. Contacts and water are measured twice a second; the ore scan reads a few chunk sections a tick (about 50,000 blocks, skipping sections without the target), and the HUD shows the last complete sweep, shifted as the ship moves. Changing the target starts a new sweep (under a second).
@@ -219,7 +220,7 @@ Distances are measured from the drillhead's middle; ores are found up to half th
 - **Interior:** an empty room with its own door (no other fixtures, no lamp). Rooms are spaced by the same gap as the sections outside (1 / 2 / 3 blocks), and each wagon is joined to the section in front of it by a passage of 1 × 2 / 3 × 3 / 5 × 4 blocks (w × h, from the floor up) that cuts through both walls and crosses the gap. Across the gap the passage is lined with bellows blocks on its sides and ceiling over a hull floor: the inside of the accordion that joins the sections outside. Detaching requires the room and the passage to be empty.
 - **Adding:** craft a wagon item and put it in the status panel's wagon slot. It needs free space behind the last section; otherwise a "something is blocking the wagon" message is shown and the item stays in the slot.
 - **Removing:** only the last wagon can be detached, so the chain never has gaps. It must be empty (no blocks or entities inside). The wagon item goes back to the player and the passage is sealed.
-- **Inventory:** wagons don't add inventory slots. Players extend storage themselves with inventory access modules and pipes.
+- **Inventory:** wagons don't add inventory slots. Players extend storage with inventory upgrades (section 8), or themselves with inventory access modules and pipes.
 
 ### Picking up the whole ship
 The ship can be picked up from the status panel when all of these are true:
@@ -231,7 +232,28 @@ The resulting item keeps the installed drill. Picking up is meant for storage. T
 
 ---
 
-## 8. Modules
+## 8. Upgrades
+
+Upgrades aren't blocks: they plug into upgrade panels in the drillhead's left wall (the side without the door), at eye level beside the cockpit, from the front back. There is one more panel per tier: 1 / 2 / 3. Each panel has four bays, one upgrade per bay. Upgrades give the ship bonuses or change how it behaves; each kind counts up to its own limit, and more change nothing.
+- **Using a panel** opens its four bays, laid out as on the wall, above the player's inventory, plus what all the ship's upgrades add up to: the radar's tier and ore range with its target (◀ ▶ to change it), and the radio with its station (◀ ▶ to tune). Any panel sets the same radar and radio.
+- **On the wall** each upgrade shows as a faceplate standing a pixel proud of its bay: a green scope for the radar, a speaker grille and dial for the radio (the dial lit while it plays), amber chevrons for the engine overdrive, a violet glow for the antigravity engine and a pair of drawers for the inventory upgrade.
+- **Outside** the radar shows as a pod under the nose and a search coil under the tail, the radio as an antenna. The other upgrades don't show outside.
+- **Picking up the ship** gives the upgrades back along with the ship.
+- Upgrades used to be called modules; worlds saved before the rename keep their radar and radio (`radar_module`, `radio_module` and `module_panel` are aliased to the new ids).
+
+| Upgrade | Use | Limit | Outside | Recipe |
+|--|--|--|--|--|
+| Radar | The driver's radar (section 6). Cumulative: each one raises its tier. | 3 | A pod under the nose and a search coil under the tail | Copper, compass, glass panes, redstone, prismarine shard |
+| Radio | Tuned from an upgrade panel: off, FM Tumbera 98.7 (the mod's own track), then five vanilla music discs (cat, blocks, chirp, mall, pigstep). It plays at the panel holding the ship's first radio, and from the drillhead outside, loud enough to hear about 24 blocks away. Taking the last one out switches it off. Going in or out of the ship (the game cuts every sound when it changes dimension) or a full sound engine never leaves it silent: the station starts again within half a second. | 1 | A whip antenna folded back along the roof (the tunnel leaves no room for a mast) | Copper, amethyst shard, note block, redstone |
+| Engine Overdrive | Each one adds +50% of the tier's top speed and +10% acceleration (also braking), and 10 FE/t to the cost of moving: one / two / three give 150 / 200 / 250% speed, 110 / 120 / 130% acceleration and 11 / 21 / 31 FE/t with the default `moveEnergy`. Reverse stays at 25% of the raised top speed. | 3 | — | Copper, blaze rod, redstone blocks, furnace, piston |
+| Antigravity Engine | Turns gravity off: the ship flies where its nose points (W / S along the heading, pitch still limited to ±30°), hovers in place when stopped, never levels out on its own and only comes down when driven onto the ground. It draws 200 FE/t whenever it is installed, even parked with nobody aboard; when the buffer can't pay a tick's draw, gravity comes back and the ship falls. Wagons follow the path as usual. | 1 | — | Shulker shells, eye of ender, phantom membranes, redstone block, copper, netherite scrap |
+| Inventory Upgrade | Adds 50 slots to the ship's inventory, after the tier's. It can only be taken out while the last 50 slots are empty; otherwise the bay refuses and a message says to empty them first. | none (bays) | — | Copper, chests, barrel |
+
+*Planned with the destruction mechanic (ships will get health and armor):* **Self-Healing Hull**: every 60 seconds it recovers 1% of the ship's health, for 5 FE/t.
+
+---
+
+## 9. Modules
 
 Modules are fixtures installed into the hull from the inside:
 - **Installing:** right-click any interior wall block while holding the module. There's no limit on the number of modules.
@@ -250,18 +272,6 @@ Modules are fixtures installed into the hull from the inside:
 | Tesla turret (small / medium) | See below. |
 | Ship locator | Works like a compass: points to the last ship used. |
 
-### Module panels
-Modules aren't blocks: they plug into module panels in the drillhead's left wall (the side without the door), at eye level beside the cockpit, from the front back. There is one more panel per tier: 1 / 2 / 3. Each panel has four bays, one module per bay.
-- **Using a panel** opens its four bays, laid out as on the wall, above the player's inventory, plus what all the ship's modules add up to: the radar's tier and ore range with its target (◀ ▶ to change it), and the radio with its station (◀ ▶ to tune). Any panel sets the same radar and radio.
-- **On the wall** each module shows as a faceplate standing a pixel proud of its bay: a green scope for the radar, a speaker grille and dial for the radio, the dial lit while it plays.
-- **Outside** the radar shows as a pod under the nose and a search coil under the tail, the radio as an antenna.
-- **Picking up the ship** gives the modules back along with the ship.
-
-| Module | Use | Outside | Recipe |
-|--|--|--|--|
-| Radar | The driver's radar (section 6). Cumulative: each module, up to three, raises its tier. | A pod under the nose and a search coil under the tail | Copper, compass, glass panes, redstone, prismarine shard |
-| Radio | Tuned from a module panel: off, FM Tumbera 98.7 (the mod's own track), then five vanilla music discs (cat, blocks, chirp, mall, pigstep). It plays at the panel holding the ship's first radio, and from the drillhead outside, loud enough to hear about 24 blocks away. One is enough; more change nothing. Taking the last one out switches it off. Going in or out of the ship (the game cuts every sound when it changes dimension) or a full sound engine never leaves it silent: the station starts again within half a second. | A whip antenna folded back along the roof (the tunnel leaves no room for a mast) | Copper, amethyst shard, note block, redstone |
-
 ### Tesla turrets
 - **Placement:** roof only, in the middle of a wagon or the drillhead. Each section can have at most one turret.
 - **Damage:** small 4, medium 6, every 0.25 s. It ignores armor completely.
@@ -272,23 +282,24 @@ Modules aren't blocks: they plug into module panels in the drillhead's left wall
 
 ---
 
-## 9. Energy
+## 10. Energy
 
 All machines on the ship share one buffer (1M / 2M / 5M FE).
 
 | Consumer | Cost |
 |--|--|
-| Moving | 1 FE/t *(config)* |
+| Moving | 1 FE/t *(config)*, plus 10 FE/t per engine overdrive |
 | Drilling | 1 FE/t per block of drill face while the drill spins, whether or not anything is being broken *(config)* |
 | Furnace / alloy furnace modules | 20 FE/t while smelting |
+| Antigravity engine | 200 FE/t while installed |
 | Tesla turret | 100 FE per hit |
 
-- Modules keep drawing from the buffer while the ship is parked and the generator is off.
-- A module that increases the buffer may come later.
+- Modules and upgrades keep drawing from the buffer while the ship is parked and the generator is off.
+- An upgrade that increases the buffer may come later.
 
 ---
 
-## 10. Damage
+## 11. Damage
 
 | Source | Damage |
 |--|--|
@@ -300,7 +311,7 @@ Passengers inside a moving ship never take damage from it.
 
 ---
 
-## 11. Materials, alloys and world generation
+## 12. Materials, alloys and world generation
 
 - Recipes use common tags (`c:ingots/steel`, `c:ingots/bronze`, …). Materials from other mods are preferred.
 - **If no other mod provides tin, zinc, bronze, brass or steel**, the mod enables its own:
@@ -331,7 +342,7 @@ A standalone block (and a module). It works like a furnace with two inputs and b
 
 ---
 
-## 12. Recipes
+## 13. Recipes
 
 All drillship recipes have the same shape in every tier and differ only in material. Each tier has its own parts (e.g. basic drill piece, standard drill piece). **P** is the tier's primary ingot, **S** its secondary ingot and **B** a block of the primary material.
 
@@ -467,13 +478,13 @@ The module base is the same for every tier.
 
 ---
 
-## 13. Compatibility
+## 14. Compatibility
 
 - The mod should work alongside most mods. The goal is a mobile base the player builds in freely.
 - **Tested against:** JEI, Create, Mekanism, AE2, Refined Storage 2 and FTB Chunks.
 - There's no in-game guide or advancements for now.
 
-## 14. Configuration
+## 15. Configuration
 
 Server config (`drillships-server.toml`):
 
@@ -493,7 +504,7 @@ Options that come with later features: radar ore tags and radius per tier, Energ
 
 ---
 
-## 15. Assets
+## 16. Assets
 
 Textures and sounds are supplied by the author. Missing assets use vanilla placeholders.
 
@@ -521,9 +532,9 @@ Textures and sounds are supplied by the author. Missing assets use vanilla place
 | `cockpit_screen` / `cockpit_telemetry` | Front wall screens: radar repeater / telemetry trace and meters |
 | `cockpit_glass` | Cockpit glazing: a gunmetal frame around a tinted, see-through pane (translucent) |
 | `bulkhead` | The header over cockpit openings: a gunmetal beam with hazard stripes along its foot |
-| `module_panel` / `module_faces` | Module panel with four bays / the faceplates of the radar and the radio (off and on) |
+| `upgrade_panel` / `upgrade_faces` | Upgrade panel with four bays / the faceplates of every upgrade (the radio off and on). `upgrade_faces` is 32 × 32 so each 6-pixel faceplate keeps the panel's pixel size; the engine overdrive, antigravity and inventory faceplates are placeholders |
 
-The chair, desk and consoles are block models with elements (the desk and console tops tilted 22.5°); the pod's roof and lamp reuse `exterior/roof`, `exterior/trim`, `hull_ceiling` and `hull_lamp`. Module items have their own icons (`textures/item/radar_module`, `radio_module`).
+The chair, desk and consoles are block models with elements (the desk and console tops tilted 22.5°); the pod's roof and lamp reuse `exterior/roof`, `exterior/trim`, `hull_ceiling` and `hull_lamp`. Upgrade items have their own icons (`textures/item/radar_upgrade`, `radio_upgrade`, and placeholders `engine_overdrive_upgrade`, `antigravity_upgrade`, `inventory_upgrade` drawn on the radar's case).
 
 **Ready for later features:** `furnace_off`/`furnace_on`, `alloy_furnace_off`/`alloy_furnace_on`, `energyio`, `hatch`.
 
@@ -587,7 +598,7 @@ Spawned on the client, at the exterior model's positions:
 
 ---
 
-## 16. Roadmap
+## 17. Roadmap
 
 1. **MVP: done.**
    - Basic-tier drillhead.
@@ -604,14 +615,17 @@ Spawned on the client, at the exterior model's positions:
    - C. Physics: **done.** Falling, and levelling out on the surface instead of staying pointed at the sky; the path at half height; joint checks so sections never cross. Gametests (run in game with `/test runall`): `levelsoutonthesurface`, `keepsitsanglewhiledrilling`, `wagonlimitsturninginplace`.
    - D. Particles and sounds: **done.** Exhaust smoke, drill chips and sparks, bubbles, track dust, landing dust; quieter loops, digging only while cutting, engine pitch with speed, muffled for the driver, capped break sounds, landing thud and coupling sounds.
    - E. Comfort modules for the bigger tiers: **done.** Radio with stations and its original track (see section 8).
-   - F. Module panels, radar and cockpit: **done.** Modules plug into module panels (1 / 2 / 3 per tier, four bays each) instead of being blocks; the sonar and metal detector became one radar, a compass line on the driver's HUD with a chosen target ore and height arrows, whose tier (up to 3) is how many radar modules are installed; a cockpit per tier with a modelled chair, desk, consoles, screens and glazing (see sections 6 and 8). Gametest: `radarmodulesaddup`.
-3. **Modules and wrench.**
+   - F. Upgrade panels, radar and cockpit: **done.** Upgrades (then called modules) plug into upgrade panels (1 / 2 / 3 per tier, four bays each) instead of being blocks; the sonar and metal detector became one radar, a compass line on the driver's HUD with a chosen target ore and height arrows, whose tier (up to 3) is how many radar modules are installed; a cockpit per tier with a modelled chair, desk, consoles, screens and glazing (see sections 6 and 8). Gametest: `radarmodulesaddup`.
+3. **Upgrades, modules and wrench.**
+   - A. Upgrades: **done** on `feat-upgrades`. The panel modules became upgrades (radar, radio) and three new ones were added: engine overdrive, antigravity engine and inventory upgrade (see section 8). Gametests: `radarupgradesaddup`, `engineoverdrivesstackuptothree`, `antigravityholdstheshipup`, `antigravitywithoutenergyfalls`, `inventoryupgradesaddslots`.
+   - B. Wall modules and wrench (section 9).
 4. **Tesla turrets.**
 5. **Standard and hardened tiers, materials and alloys.**
 6. **Ore deposits** (the radar is done, see 2b F).
 7. **Filters and barrels.**
 8. **Mouse steering through the periscope.**
+9. **Destruction:** ship health and armor, and the Self-Healing Hull upgrade.
 
-## 17. Open questions
+## 18. Open questions
 
-1. **Ore deposits:** the frequency, ore selection and depth range in section 11 are defaults. Confirm them when the feature is built.
+1. **Ore deposits:** the frequency, ore selection and depth range in section 12 are defaults. Confirm them when the feature is built.
