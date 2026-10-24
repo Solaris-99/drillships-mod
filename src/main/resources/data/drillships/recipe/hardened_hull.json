@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "BBB",
+    "SSS",
+    "BBB"
+  ],
+  "key": {
+    "B": {
+      "tag": "c:storage_blocks/steel"
+    },
+    "S": {
+      "tag": "c:gems/diamond"
+    }
+  },
+  "result": {
+    "id": "drillships:hardened_hull",
+    "count": 1
+  }
+}

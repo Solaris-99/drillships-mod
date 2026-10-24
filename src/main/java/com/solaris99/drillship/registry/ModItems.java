@@ -3,7 +3,9 @@ package com.solaris99.drillship.registry;
 import com.solaris99.drillship.Drillships;
 import com.solaris99.drillship.item.DrillItem;
 import com.solaris99.drillship.item.DrillshipItem;
+import com.solaris99.drillship.item.ModuleItem;
 import com.solaris99.drillship.item.WagonItem;
+import com.solaris99.drillship.ship.ShipModule;
 import com.solaris99.drillship.ship.ShipTier;
 
 import net.minecraft.world.item.Item;
@@ -29,11 +31,67 @@ public final class ModItems {
     public static final DeferredItem<WagonItem> BASIC_WAGON = ITEMS.register("basic_wagon",
             () -> new WagonItem(ShipTier.BASIC, new Item.Properties()));
 
+    // Standard tier parts (primary: bronze, secondary: brass)
+    public static final DeferredItem<Item> STANDARD_WHEEL = ITEMS.registerSimpleItem("standard_wheel");
+    public static final DeferredItem<Item> STANDARD_TREAD = ITEMS.registerSimpleItem("standard_tread");
+    public static final DeferredItem<Item> STANDARD_HULL = ITEMS.registerSimpleItem("standard_hull");
+    public static final DeferredItem<Item> STANDARD_DRILL_PIECE = ITEMS.registerSimpleItem("standard_drill_piece");
+    public static final DeferredItem<Item> STANDARD_DRILL_SHAFT = ITEMS.registerSimpleItem("standard_drill_shaft");
+    public static final DeferredItem<Item> STANDARD_ENGINE = ITEMS.registerSimpleItem("standard_engine");
+
+    public static final DeferredItem<DrillItem> STANDARD_DRILL = ITEMS.register("standard_drill",
+            () -> new DrillItem(ShipTier.STANDARD, new Item.Properties()));
+    public static final DeferredItem<DrillshipItem> STANDARD_DRILLSHIP = ITEMS.register("standard_drillship",
+            () -> new DrillshipItem(ShipTier.STANDARD, new Item.Properties()));
+    public static final DeferredItem<WagonItem> STANDARD_WAGON = ITEMS.register("standard_wagon",
+            () -> new WagonItem(ShipTier.STANDARD, new Item.Properties()));
+
+    // Hardened tier parts (primary: steel, secondary: diamond)
+    public static final DeferredItem<Item> HARDENED_WHEEL = ITEMS.registerSimpleItem("hardened_wheel");
+    public static final DeferredItem<Item> HARDENED_TREAD = ITEMS.registerSimpleItem("hardened_tread");
+    public static final DeferredItem<Item> HARDENED_HULL = ITEMS.registerSimpleItem("hardened_hull");
+    public static final DeferredItem<Item> HARDENED_DRILL_PIECE = ITEMS.registerSimpleItem("hardened_drill_piece");
+    public static final DeferredItem<Item> HARDENED_DRILL_SHAFT = ITEMS.registerSimpleItem("hardened_drill_shaft");
+    public static final DeferredItem<Item> HARDENED_ENGINE = ITEMS.registerSimpleItem("hardened_engine");
+
+    public static final DeferredItem<DrillItem> HARDENED_DRILL = ITEMS.register("hardened_drill",
+            () -> new DrillItem(ShipTier.HARDENED, new Item.Properties()));
+    public static final DeferredItem<DrillshipItem> HARDENED_DRILLSHIP = ITEMS.register("hardened_drillship",
+            () -> new DrillshipItem(ShipTier.HARDENED, new Item.Properties()));
+    public static final DeferredItem<WagonItem> HARDENED_WAGON = ITEMS.register("hardened_wagon",
+            () -> new WagonItem(ShipTier.HARDENED, new Item.Properties()));
+
+    // Modules for the module panels.
+    public static final DeferredItem<ModuleItem> RADAR_MODULE = ITEMS.register("radar_module",
+            () -> new ModuleItem(ShipModule.RADAR, new Item.Properties().stacksTo(16)));
+    public static final DeferredItem<ModuleItem> RADIO_MODULE = ITEMS.register("radio_module",
+            () -> new ModuleItem(ShipModule.RADIO, new Item.Properties().stacksTo(16)));
+
+    public static ItemStack module(ShipModule module) {
+        return new ItemStack(module == ShipModule.RADAR ? RADAR_MODULE.get() : RADIO_MODULE.get());
+    }
+
     public static ItemStack newDrill(ShipTier tier) {
+        return new ItemStack(switch (tier) {
+            case BASIC -> BASIC_DRILL.get();
+            case STANDARD -> STANDARD_DRILL.get();
+            case HARDENED -> HARDENED_DRILL.get();
+        });
+    }
+
+    public static Item drillship(ShipTier tier) {
         return switch (tier) {
-            case BASIC -> new ItemStack(BASIC_DRILL.get());
-            // Standard and hardened drills come with the other tiers.
-            case STANDARD, HARDENED -> ItemStack.EMPTY;
+            case BASIC -> BASIC_DRILLSHIP.get();
+            case STANDARD -> STANDARD_DRILLSHIP.get();
+            case HARDENED -> HARDENED_DRILLSHIP.get();
+        };
+    }
+
+    public static Item wagon(ShipTier tier) {
+        return switch (tier) {
+            case BASIC -> BASIC_WAGON.get();
+            case STANDARD -> STANDARD_WAGON.get();
+            case HARDENED -> HARDENED_WAGON.get();
         };
     }
 

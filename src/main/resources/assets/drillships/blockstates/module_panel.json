@@ -1,0 +1,17 @@
+{
+  "multipart": [
+    { "apply": { "model": "drillships:block/module_panel" } },
+    { "when": { "bay0": "radar" }, "apply": { "model": "drillships:block/module_panel_bay0_radar" } },
+    { "when": { "bay0": "radio", "station": "0" }, "apply": { "model": "drillships:block/module_panel_bay0_radio" } },
+    { "when": { "bay0": "radio", "station": "1|2|3|4|5|6" }, "apply": { "model": "drillships:block/module_panel_bay0_radio_on" } },
+    { "when": { "bay1": "radar" }, "apply": { "model": "drillships:block/module_panel_bay1_radar" } },
+    { "when": { "bay1": "radio", "station": "0" }, "apply": { "model": "drillships:block/module_panel_bay1_radio" } },
+    { "when": { "bay1": "radio", "station": "1|2|3|4|5|6" }, "apply": { "model": "drillships:block/module_panel_bay1_radio_on" } },
+    { "when": { "bay2": "radar" }, "apply": { "model": "drillships:block/module_panel_bay2_radar" } },
+    { "when": { "bay2": "radio", "station": "0" }, "apply": { "model": "drillships:block/module_panel_bay2_radio" } },
+    { "when": { "bay2": "radio", "station": "1|2|3|4|5|6" }, "apply": { "model": "drillships:block/module_panel_bay2_radio_on" } },
+    { "when": { "bay3": "radar" }, "apply": { "model": "drillships:block/module_panel_bay3_radar" } },
+    { "when": { "bay3": "radio", "station": "0" }, "apply": { "model": "drillships:block/module_panel_bay3_radio" } },
+    { "when": { "bay3": "radio", "station": "1|2|3|4|5|6" }, "apply": { "model": "drillships:block/module_panel_bay3_radio_on" } }
+  ]
+}

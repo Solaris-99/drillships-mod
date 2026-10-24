@@ -1,0 +1,138 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "seat": "drillships:block/cockpit_seat",
+    "metal": "drillships:block/exterior/trim",
+    "particle": "drillships:block/cockpit_seat"
+  },
+  "elements": [
+    { "__comment": "star base",
+      "from": [4, 0, 4], "to": [12, 1, 12],
+      "faces": {
+        "down": { "texture": "#metal", "cullface": "down" }, "up": { "texture": "#metal" },
+        "north": { "texture": "#metal" }, "south": { "texture": "#metal" }, "east": { "texture": "#metal" }, "west": { "texture": "#metal" }
+      }
+    },
+    { "__comment": "post",
+      "from": [7, 1, 7], "to": [9, 5, 9],
+      "faces": {
+        "north": { "texture": "#metal" }, "south": { "texture": "#metal" }, "east": { "texture": "#metal" }, "west": { "texture": "#metal" }
+      }
+    },
+    { "__comment": "seat pan",
+      "from": [3, 5, 2], "to": [13, 6, 13],
+      "faces": {
+        "down": { "texture": "#metal" }, "north": { "texture": "#metal" }, "south": { "texture": "#metal" },
+        "east": { "texture": "#metal" }, "west": { "texture": "#metal" }
+      }
+    },
+    { "__comment": "seat cushion",
+      "from": [3, 6, 2], "to": [13, 8.5, 13],
+      "faces": {
+        "up": { "uv": [1, 1, 11, 12], "texture": "#seat" },
+        "north": { "uv": [1, 4, 11, 6.5], "texture": "#seat" }, "south": { "uv": [1, 4, 11, 6.5], "texture": "#seat" },
+        "east": { "uv": [1, 4, 12, 6.5], "texture": "#seat" }, "west": { "uv": [1, 4, 12, 6.5], "texture": "#seat" }
+      }
+    },
+    { "__comment": "backrest cushion",
+      "from": [3, 8.5, 12], "to": [13, 20, 14],
+      "faces": {
+        "up": { "uv": [1, 0, 11, 2], "texture": "#seat" },
+        "north": { "uv": [1, 0, 11, 11.5], "texture": "#seat" },
+        "east": { "uv": [6, 0, 8, 11.5], "texture": "#seat" }, "west": { "uv": [6, 0, 8, 11.5], "texture": "#seat" }
+      }
+    },
+    { "__comment": "backrest shell",
+      "from": [2.5, 7, 14], "to": [13.5, 20.5, 15],
+      "faces": {
+        "up": { "texture": "#metal" }, "down": { "texture": "#metal" }, "north": { "texture": "#metal" }, "south": { "texture": "#metal" },
+        "east": { "texture": "#metal" }, "west": { "texture": "#metal" }
+      }
+    },
+    { "__comment": "headrest neck",
+      "from": [6.5, 20, 13.5], "to": [9.5, 21, 14.5],
+      "faces": {
+        "north": { "texture": "#metal" }, "south": { "texture": "#metal" }, "east": { "texture": "#metal" }, "west": { "texture": "#metal" }
+      }
+    },
+    { "__comment": "headrest",
+      "from": [5, 21, 12.5], "to": [11, 24, 14.5],
+      "faces": {
+        "up": { "uv": [3, 0, 9, 2], "texture": "#seat" }, "down": { "uv": [3, 2, 9, 4], "texture": "#seat" },
+        "north": { "uv": [3, 0, 9, 3], "texture": "#seat" }, "south": { "texture": "#metal" },
+        "east": { "uv": [4, 0, 6, 3], "texture": "#seat" }, "west": { "uv": [4, 0, 6, 3], "texture": "#seat" }
+      }
+    },
+    { "__comment": "left armrest",
+      "from": [1, 10, 4], "to": [3, 11.5, 12],
+      "faces": {
+        "up": { "uv": [1, 2, 3, 10], "texture": "#seat" }, "down": { "texture": "#metal" },
+        "north": { "uv": [1, 2, 3, 3.5], "texture": "#seat" }, "south": { "uv": [1, 2, 3, 3.5], "texture": "#seat" },
+        "east": { "uv": [2, 2, 10, 3.5], "texture": "#seat" }, "west": { "uv": [2, 2, 10, 3.5], "texture": "#seat" }
+      }
+    },
+    { "__comment": "left armrest support",
+      "from": [1.5, 6, 8], "to": [2.5, 10, 9.5],
+      "faces": {
+        "north": { "texture": "#metal" }, "south": { "texture": "#metal" }, "east": { "texture": "#metal" }, "west": { "texture": "#metal" }
+      }
+    },
+    { "__comment": "left bracket",
+      "from": [1.5, 5, 8], "to": [3, 6, 9.5],
+      "faces": {
+        "down": { "texture": "#metal" }, "up": { "texture": "#metal" }, "north": { "texture": "#metal" }, "south": { "texture": "#metal" },
+        "west": { "texture": "#metal" }
+      }
+    },
+    { "__comment": "left joystick",
+      "from": [1.5, 11.5, 5], "to": [2.5, 13.5, 6],
+      "faces": {
+        "north": { "texture": "#metal" }, "south": { "texture": "#metal" }, "east": { "texture": "#metal" }, "west": { "texture": "#metal" }
+      }
+    },
+    { "__comment": "left knob",
+      "from": [1.25, 13.5, 4.75], "to": [2.75, 14.5, 6.25],
+      "faces": {
+        "up": { "uv": [13, 13, 14.5, 14.5], "texture": "#seat" }, "down": { "uv": [13, 13, 14.5, 14.5], "texture": "#seat" },
+        "north": { "uv": [13, 13, 14.5, 14], "texture": "#seat" }, "south": { "uv": [13, 13, 14.5, 14], "texture": "#seat" },
+        "east": { "uv": [13, 13, 14.5, 14], "texture": "#seat" }, "west": { "uv": [13, 13, 14.5, 14], "texture": "#seat" }
+      }
+    },
+    { "__comment": "right armrest",
+      "from": [13, 10, 4], "to": [15, 11.5, 12],
+      "faces": {
+        "up": { "uv": [1, 2, 3, 10], "texture": "#seat" }, "down": { "texture": "#metal" },
+        "north": { "uv": [1, 2, 3, 3.5], "texture": "#seat" }, "south": { "uv": [1, 2, 3, 3.5], "texture": "#seat" },
+        "east": { "uv": [2, 2, 10, 3.5], "texture": "#seat" }, "west": { "uv": [2, 2, 10, 3.5], "texture": "#seat" }
+      }
+    },
+    { "__comment": "right armrest support",
+      "from": [13.5, 6, 8], "to": [14.5, 10, 9.5],
+      "faces": {
+        "north": { "texture": "#metal" }, "south": { "texture": "#metal" }, "east": { "texture": "#metal" }, "west": { "texture": "#metal" }
+      }
+    },
+    { "__comment": "right bracket",
+      "from": [13, 5, 8], "to": [14.5, 6, 9.5],
+      "faces": {
+        "down": { "texture": "#metal" }, "up": { "texture": "#metal" }, "north": { "texture": "#metal" }, "south": { "texture": "#metal" },
+        "east": { "texture": "#metal" }
+      }
+    },
+    { "__comment": "right joystick",
+      "from": [13.5, 11.5, 5], "to": [14.5, 13.5, 6],
+      "faces": {
+        "north": { "texture": "#metal" }, "south": { "texture": "#metal" }, "east": { "texture": "#metal" }, "west": { "texture": "#metal" }
+      }
+    },
+    { "__comment": "right knob",
+      "from": [13.25, 13.5, 4.75], "to": [14.75, 14.5, 6.25],
+      "faces": {
+        "up": { "uv": [13, 13, 14.5, 14.5], "texture": "#seat" }, "down": { "uv": [13, 13, 14.5, 14.5], "texture": "#seat" },
+        "north": { "uv": [13, 13, 14.5, 14], "texture": "#seat" }, "south": { "uv": [13, 13, 14.5, 14], "texture": "#seat" },
+        "east": { "uv": [13, 13, 14.5, 14], "texture": "#seat" }, "west": { "uv": [13, 13, 14.5, 14], "texture": "#seat" }
+      }
+    }
+  ]
+}

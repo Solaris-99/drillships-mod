@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "SSS",
+    " P ",
+    " P "
+  ],
+  "key": {
+    "S": {
+      "tag": "c:ingots/brass"
+    },
+    "P": {
+      "tag": "c:ingots/bronze"
+    }
+  },
+  "result": {
+    "id": "drillships:standard_drill_piece",
+    "count": 1
+  }
+}

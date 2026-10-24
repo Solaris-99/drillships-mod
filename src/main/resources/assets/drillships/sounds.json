@@ -1,7 +1,7 @@
 {
   "engine_idle": {
     "subtitle": "subtitles.drillships.engine_idle",
-    "sounds": [{ "name": "drillships:engine_idle", "attenuation_distance": 24 }]
+    "sounds": [{ "name": "drillships:engine_idle", "attenuation_distance": 16 }]
   },
   "engine_working": {
     "subtitle": "subtitles.drillships.engine_working",
@@ -9,10 +9,14 @@
   },
   "engine_stop": {
     "subtitle": "subtitles.drillships.engine_stop",
-    "sounds": [{ "name": "drillships:engine_stop", "attenuation_distance": 24 }]
+    "sounds": [{ "name": "drillships:engine_stop", "attenuation_distance": 20 }]
   },
   "digging": {
     "subtitle": "subtitles.drillships.digging",
     "sounds": [{ "name": "drillships:digging", "attenuation_distance": 24 }]
+  },
+  "music.cumbia_del_taladro": {
+    "subtitle": "subtitles.drillships.radio",
+    "sounds": [{ "name": "drillships:music/cumbia_del_taladro", "stream": true }]
   }
 }

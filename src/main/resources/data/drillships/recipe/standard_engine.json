@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "BSB",
+    "SFS",
+    "BSB"
+  ],
+  "key": {
+    "B": {
+      "tag": "c:storage_blocks/bronze"
+    },
+    "S": {
+      "tag": "c:ingots/brass"
+    },
+    "F": {
+      "item": "minecraft:furnace"
+    }
+  },
+  "result": {
+    "id": "drillships:standard_engine",
+    "count": 1
+  }
+}

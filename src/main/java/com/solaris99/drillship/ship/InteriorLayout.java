@@ -1,9 +1,12 @@
 package com.solaris99.drillship.ship;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -15,6 +18,9 @@ import net.minecraft.world.phys.Vec3;
 public record InteriorLayout(ShipTier tier, BlockPos origin) {
     public static final int REGION_SPACING = 1024;
     public static final int BASE_Y = 64;
+    // The hardened cockpit pod is this tall inside, roof above; the standard bulkhead's opening ends under its header.
+    private static final int POD_HEIGHT = 3;
+    private static final int BULKHEAD_HEADER = 4;
 
     public static InteriorLayout of(ShipTier tier, int index) {
         return new InteriorLayout(tier, new BlockPos(index * REGION_SPACING, BASE_Y, 0));
@@ -66,33 +72,73 @@ public record InteriorLayout(ShipTier tier, BlockPos origin) {
         }
     }
 
-    /** Section 0 is the drillhead, 1..n are wagons. */
+    /**
+     * Section 0 is the drillhead, 1..n are wagons. Rooms are spaced by the tier's coupling gap, like the sections
+     * outside, and joined across it by a passage.
+     */
     public Room room(int section) {
         if (section == 0) {
             return new Room(origin, sizeX(), sizeY(), sizeZ());
         }
         int length = tier.wagonExteriorLength();
-        return new Room(origin.offset(0, 0, -section * length), sizeX(), sizeY(), length);
+        return new Room(origin.offset(0, 0, -section * (length + tier.coupling().gap())), sizeX(), sizeY(), length);
     }
 
-    /** The four blocks cut through the back wall of {@code section - 1} and the front wall of {@code section}. */
+    /** The section whose room contains {@code pos}, or -1. */
+    public int sectionAt(BlockPos pos) {
+        for (int section = 0; section <= tier.maxWagons(); section++) {
+            if (room(section).contains(pos)) {
+                return section;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * The opening into {@code section} from the one in front: through the back wall of {@code section - 1}, across
+     * the gap and through the front wall of {@code section}. As wide and high as the tier's passage, from the floor up.
+     */
     public List<BlockPos> passage(int section) {
-        int frontWallOfWagon = room(section).maxCorner().getZ();
-        int backWallOfPrevious = room(section - 1).origin().getZ();
         List<BlockPos> blocks = new ArrayList<>();
-        for (int z : new int[] {frontWallOfWagon, backWallOfPrevious}) {
-            for (int y = 1; y <= 2; y++) {
-                blocks.add(new BlockPos(origin.getX() + centerX(), origin.getY() + y, z));
+        int x0 = passageX0(), y1 = tier.coupling().passageHeight();
+        for (int z = room(section).maxCorner().getZ(); z <= room(section - 1).origin().getZ(); z++) {
+            for (int x = x0; x < x0 + tier.coupling().passageWidth(); x++) {
+                for (int y = 1; y <= y1; y++) {
+                    blocks.add(new BlockPos(origin.getX() + x, origin.getY() + y, z));
+                }
             }
         }
         return blocks;
+    }
+
+    /**
+     * The lining of the passage across the gap: a floor under it and bellows on its sides and ceiling, the same
+     * accordion that joins the sections outside. Maps each block to whether it is floor.
+     */
+    public Map<BlockPos, Boolean> passageLining(int section) {
+        Map<BlockPos, Boolean> blocks = new LinkedHashMap<>();
+        int x0 = passageX0() - 1, x1 = passageX0() + tier.coupling().passageWidth(), y1 = tier.coupling().passageHeight() + 1;
+        for (int z = room(section).maxCorner().getZ() + 1; z < room(section - 1).origin().getZ(); z++) {
+            for (int x = x0; x <= x1; x++) {
+                for (int y = 0; y <= y1; y++) {
+                    if (x == x0 || x == x1 || y == 0 || y == y1) {
+                        blocks.put(new BlockPos(origin.getX() + x, origin.getY() + y, z), y == 0);
+                    }
+                }
+            }
+        }
+        return blocks;
+    }
+
+    private int passageX0() {
+        return centerX() - tier.coupling().passageWidth() / 2;
     }
 
     private int centerX() {
         return sizeX() / 2;
     }
 
-    // Front wall: status panel and helm at eye level.
+    // Front wall: status panel and helm at eye level, above the cockpit's desk.
     public BlockPos helm() {
         return origin.offset(centerX(), 2, sizeZ() - 1);
     }
@@ -101,22 +147,116 @@ public record InteriorLayout(ShipTier tier, BlockPos origin) {
         return origin.offset(centerX() - 1, 2, sizeZ() - 1);
     }
 
-    // Left wall: door and generator.
-    public BlockPos doorLower() {
-        return origin.offset(0, 1, 2);
+    /** The driver's chair, facing the front, two blocks back from the front wall with the desk in between. */
+    public BlockPos chair() {
+        return origin.offset(centerX(), 1, sizeZ() - 3);
     }
 
-    public BlockPos doorUpper() {
-        return origin.offset(0, 2, 2);
+    /** A piece of the cockpit (see {@link #cockpit()}), facing where its operator is. */
+    public record CockpitPart(BlockPos pos, Kind kind, Direction facing) {
+        public enum Kind {
+            DESK, CONSOLE, SCREEN, SKIRT, GLASS, HEADER, PIPES, POST, ROOF, ROOF_LAMP, LAMP
+        }
+    }
+
+    /**
+     * Everything around the chair. In every tier: a desk across the cockpit's width in front of the chair, a console
+     * on either side of it and screens filling the front wall beside the helm and status panel. Then, by tier:
+     * <ul>
+     * <li>basic: the cabin is three blocks wide, so the cockpit is just its front two rows, flanked by the generator
+     * and the storage access on the walls;</li>
+     * <li>standard: a glazed bulkhead across the cabin behind the chair, with a three-wide opening under a header;</li>
+     * <li>hardened: the cabin is too wide to wall off whole, so the cockpit is a three-wide glazed pod with a roof and
+     * its own lamp, leaving a bay on either side: the generator's on the right, the module panels' on the left.</li>
+     * </ul>
+     */
+    public List<CockpitPart> cockpit() {
+        List<CockpitPart> parts = new ArrayList<>();
+        int cx = centerX(), chairZ = chair().getZ() - origin.getZ(), deskZ = chairZ + 1, front = sizeZ() - 1;
+        boolean pod = isPodded();
+        int x0 = pod ? cx - 1 : 1, x1 = pod ? cx + 1 : sizeX() - 2;
+        for (int x = x0; x <= x1; x++) {
+            parts.add(part(x, 1, deskZ, CockpitPart.Kind.DESK, Direction.NORTH));
+            if (x != cx && x != cx - 1) {
+                parts.add(part(x, 2, front, CockpitPart.Kind.SCREEN, Direction.NORTH));
+            }
+        }
+        parts.add(part(x0, 1, chairZ, CockpitPart.Kind.CONSOLE, Direction.EAST));
+        parts.add(part(x1, 1, chairZ, CockpitPart.Kind.CONSOLE, Direction.WEST));
+        if (pod) {
+            // Glazed up to the roof, a post at each back corner and a header over the two-high door.
+            int left = x0 - 1, right = x1 + 1, back = chairZ - 2, top = POD_HEIGHT;
+            for (int z = back; z <= deskZ; z++) {
+                for (int x = left; x <= right; x++) {
+                    boolean side = x == left || x == right, rear = z == back;
+                    for (int y = 1; (side || rear) && y <= top; y++) {
+                        CockpitPart.Kind kind = side && rear ? CockpitPart.Kind.POST : rear && x == cx ? (y == top ? CockpitPart.Kind.HEADER : null)
+                                : y == 1 ? CockpitPart.Kind.SKIRT : CockpitPart.Kind.GLASS;
+                        if (kind != null) {
+                            parts.add(part(x, y, z, kind, Direction.NORTH));
+                        }
+                    }
+                    parts.add(part(x, top + 1, z, x == cx && z == chairZ ? CockpitPart.Kind.ROOF_LAMP : CockpitPart.Kind.ROOF, Direction.NORTH));
+                }
+            }
+        } else if (tier.interiorWidth() > 3) {
+            int z = chairZ - 1;
+            for (int x = 1; x <= sizeX() - 2; x++) {
+                for (int y = 1; y <= sizeY() - 2; y++) {
+                    boolean opening = Math.abs(x - cx) <= 1 && y < BULKHEAD_HEADER;
+                    CockpitPart.Kind kind = opening ? null : y == 1 ? CockpitPart.Kind.SKIRT : y < BULKHEAD_HEADER ? CockpitPart.Kind.GLASS
+                            : y == BULKHEAD_HEADER ? CockpitPart.Kind.HEADER : CockpitPart.Kind.PIPES;
+                    if (kind != null) {
+                        parts.add(part(x, y, z, kind, Direction.NORTH));
+                    }
+                }
+            }
+            parts.add(part(cx, sizeY() - 1, chairZ, CockpitPart.Kind.LAMP, Direction.NORTH));
+        }
+        return parts;
+    }
+
+    // Cabins wider than this get a pod rather than a bulkhead from wall to wall.
+    private boolean isPodded() {
+        return tier.interiorWidth() > 5;
+    }
+
+    private CockpitPart part(int x, int y, int z, CockpitPart.Kind kind, Direction facing) {
+        return new CockpitPart(origin.offset(x, y, z), kind, facing);
+    }
+
+    /** Module panels in the left wall at eye level, from the front back: beside the cockpit, within the driver's reach. */
+    public List<BlockPos> modulePanels() {
+        List<BlockPos> panels = new ArrayList<>();
+        for (int i = 0; i < tier.modulePanels(); i++) {
+            panels.add(origin.offset(sizeX() - 1, 2, sizeZ() - 2 - i));
+        }
+        return panels;
+    }
+
+    // Min-X wall, on your right when facing the helm (and on the ship's right outside): door and generator. Every
+    // section has its door here, third block from the back, where the exterior shows it.
+    public BlockPos doorLower(int section) {
+        return room(section).origin().offset(0, 1, 2);
+    }
+
+    public BlockPos doorUpper(int section) {
+        return room(section).origin().offset(0, 2, 2);
+    }
+
+    /** Just inside a section's door, facing into the room. */
+    public Vec3 doorEntry(int section) {
+        BlockPos door = doorLower(section);
+        return new Vec3(door.getX() + 1.5, door.getY(), door.getZ() + 0.5);
     }
 
     public BlockPos generator() {
         return origin.offset(0, 2, sizeZ() - 3);
     }
 
-    // Right wall: storage access and crafting table.
+    // Max-X wall: crafting table and storage access at the back, facing the door; the module panels at the front.
     public BlockPos storage() {
-        return origin.offset(sizeX() - 1, 2, sizeZ() - 3);
+        return origin.offset(sizeX() - 1, 2, 3);
     }
 
     public BlockPos crafting() {
@@ -132,9 +272,10 @@ public record InteriorLayout(ShipTier tier, BlockPos origin) {
         return new Vec3(origin.getX() + centerX() + 0.5, origin.getY() + 1, origin.getZ() + 2.5);
     }
 
-    /** Where the driver stands when they stop driving. */
+    /** Where the driver stands when they stop driving: just behind the chair, facing the front. */
     public Vec3 helmPoint() {
-        return new Vec3(origin.getX() + centerX() + 0.5, origin.getY() + 1, origin.getZ() + sizeZ() - 1.5);
+        BlockPos chair = chair();
+        return new Vec3(chair.getX() + 0.5, chair.getY(), chair.getZ() - 0.5);
     }
 
     /** Everything the ship could ever use: the drillhead room plus room for the tier's maximum number of wagons. */

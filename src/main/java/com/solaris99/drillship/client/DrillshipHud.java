@@ -16,12 +16,12 @@ import net.minecraft.util.Mth;
 
 /**
  * The driver's HUD, styled like an old military terminal: green monospace text on dark panels with scanlines. Shows the
- * ship's attitude, drill, power and warnings. Readouts come from {@link ModNetwork.ShipStatus}; attitude comes straight
+ * ship's attitude, drill, power and warnings, and the radar (RadarHud) when the ship has radar modules. Readouts come from {@link ModNetwork.ShipStatus}; attitude comes straight
  * from the interpolated entity so it moves smoothly.
  */
 public final class DrillshipHud {
-    private static final int GREEN = 0xFF33FF33;
-    private static final int DIM_GREEN = 0xFF1C8C1C;
+    static final int GREEN = 0xFF33FF33;
+    static final int DIM_GREEN = 0xFF1C8C1C;
     private static final int BACKGROUND = 0xA0000000;
     private static final int SCANLINE = 0x30000000;
     private static final int MARGIN = 6;
@@ -51,15 +51,20 @@ public final class DrillshipHud {
         boolean blinkOn = (minecraft.level.getGameTime() / 10) % 2 == 0;
         ModNetwork.ShipStatus status = ModNetwork.ShipStatus.latest;
 
-        int bottom = renderReadouts(graphics, font, status);
+        int[] readouts = renderReadouts(graphics, font, status);
+        int bottom = readouts[1];
         if (status != null) {
             renderWarnings(graphics, font, status.warnings(), bottom + 2, blinkOn);
         }
-        renderAttitude(graphics, font, ship, partialTick, graphics.guiWidth() - MARGIN - ATTITUDE_SIZE, MARGIN);
+        int attitudeLeft = graphics.guiWidth() - MARGIN - ATTITUDE_SIZE;
+        renderAttitude(graphics, font, ship, partialTick, attitudeLeft, MARGIN);
+        // The radar line goes between the readouts and the attitude indicator, or under the latter when that is too narrow.
+        RadarHud.render(graphics, font, ship, partialTick, readouts[0] + MARGIN, attitudeLeft - MARGIN, MARGIN,
+                graphics.guiWidth() - MARGIN, MARGIN + ATTITUDE_SIZE + 2 + LINE_HEIGHT + PADDING + 4);
     }
 
-    // Top left: power, drill and speed. Returns the panel's bottom edge.
-    private static int renderReadouts(GuiGraphics graphics, Font font, ModNetwork.ShipStatus status) {
+    // Top left: power, drill and speed. Returns the panel's right and bottom edges.
+    private static int[] renderReadouts(GuiGraphics graphics, Font font, ModNetwork.ShipStatus status) {
         List<String> lines = new ArrayList<>();
         lines.add("DRILLSHIP // LINK " + (status == null ? "...." : "OK"));
         if (status != null) {
@@ -83,7 +88,7 @@ public final class DrillshipHud {
             graphics.drawString(font, terminal(line), MARGIN + PADDING, y, GREEN, false);
             y += LINE_HEIGHT;
         }
-        return MARGIN + height + PADDING * 2;
+        return new int[] {MARGIN + width + PADDING * 2, MARGIN + height + PADDING * 2};
     }
 
     // Under the readouts, blinking.
@@ -146,7 +151,7 @@ public final class DrillshipHud {
         graphics.drawString(font, readout, readoutLeft + PADDING, top + size + 2 + PADDING / 2 + 1, GREEN, false);
     }
 
-    private static void panel(GuiGraphics graphics, int x, int y, int width, int height) {
+    static void panel(GuiGraphics graphics, int x, int y, int width, int height) {
         graphics.fill(x, y, x + width, y + height, BACKGROUND);
         for (int row = y + 1; row < y + height; row += 2) {
             graphics.hLine(x, x + width - 1, row, SCANLINE);
@@ -154,7 +159,7 @@ public final class DrillshipHud {
         graphics.renderOutline(x, y, width, height, DIM_GREEN);
     }
 
-    private static Component terminal(String text) {
+    static Component terminal(String text) {
         return Component.literal(text).withStyle(style -> style.withFont(Minecraft.UNIFORM_FONT));
     }
 

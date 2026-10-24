@@ -11,7 +11,11 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
 
 /** Attaching wagons to a ship and detaching them. Only the last wagon can be detached, so the chain never has gaps. */
 public final class ShipWagons {
@@ -34,6 +38,7 @@ public final class ShipWagons {
             return Component.translatable("message.drillships.wagon_blocked");
         }
         Interiors.buildWagon(interior, ship.layout(), wagon);
+        couplingSound(level, ship, wagon, SoundEvents.CHAIN_PLACE);
         ship.setWagonCount(wagon);
         // The exterior is spawned by ShipTicker on the next tick, like any section whose entity is missing.
         return null;
@@ -50,8 +55,12 @@ public final class ShipWagons {
         if (interior == null) {
             return Component.translatable("message.drillships.unreachable");
         }
-        if (!Interiors.isEmpty(interior, ship.layout().room(wagon), player)) {
+        if (!Interiors.isWagonEmpty(interior, ship.layout(), wagon, player)) {
             return Component.translatable("message.drillships.wagon_not_empty");
+        }
+        ServerLevel level = player.server.getLevel(ship.dimension());
+        if (level != null) {
+            couplingSound(level, ship, wagon, SoundEvents.CHAIN_BREAK);
         }
         removeExterior(player.server, ship, wagon);
         Interiors.removeWagon(interior, ship.layout(), wagon);
@@ -71,6 +80,14 @@ public final class ShipWagons {
     public static WagonEntity findEntity(MinecraftServer server, ShipState ship, int wagon) {
         ServerLevel level = server.getLevel(ship.dimension());
         return level != null && level.getEntity(ship.wagonId(wagon)) instanceof WagonEntity entity ? entity : null;
+    }
+
+    // At the coupling in front of the wagon, half way up.
+    private static void couplingSound(ServerLevel level, ShipState ship, int wagon, SoundEvent sound) {
+        ShipState.Pose pose = ship.wagonPose(wagon);
+        ShipShape shape = ShipShape.wagon(ship.tier());
+        Vec3 coupling = pose.frame().toWorld(0, shape.height / 2, shape.hullFront);
+        level.playSound(null, coupling.x, coupling.y, coupling.z, sound, SoundSource.NEUTRAL, 1.0F, 0.8F);
     }
 
     private ShipWagons() {

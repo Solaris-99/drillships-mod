@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "drillships:block/exterior/roof",
+    "bottom": "drillships:block/hull_ceiling",
+    "side": "drillships:block/exterior/trim"
+  }
+}

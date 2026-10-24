@@ -37,10 +37,7 @@ public class DrillshipItem extends Item {
     }
 
     public static ItemStack create(ShipTier tier, ItemStack drill) {
-        ItemStack stack = switch (tier) {
-            case BASIC -> new ItemStack(ModItems.BASIC_DRILLSHIP.get());
-            case STANDARD, HARDENED -> throw new IllegalStateException("Tier not implemented yet: " + tier);
-        };
+        ItemStack stack = new ItemStack(ModItems.drillship(tier));
         stack.set(ModComponents.INSTALLED_DRILL.get(), ItemContainerContents.fromItems(List.of(drill)));
         return stack;
     }

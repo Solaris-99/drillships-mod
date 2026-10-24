@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "BSB",
+    "SFS",
+    "BSB"
+  ],
+  "key": {
+    "B": {
+      "tag": "c:storage_blocks/steel"
+    },
+    "S": {
+      "tag": "c:gems/diamond"
+    },
+    "F": {
+      "item": "minecraft:furnace"
+    }
+  },
+  "result": {
+    "id": "drillships:hardened_engine",
+    "count": 1
+  }
+}

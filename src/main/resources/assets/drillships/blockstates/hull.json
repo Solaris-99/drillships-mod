@@ -1,3 +1,8 @@
 {
-  "variants": { "": { "model": "drillships:block/hull" } }
+  "variants": {
+    "panel=0": { "model": "drillships:block/hull_00" },
+    "panel=1": { "model": "drillships:block/hull_10" },
+    "panel=2": { "model": "drillships:block/hull_01" },
+    "panel=3": { "model": "drillships:block/hull_11" }
+  }
 }
