@@ -14,11 +14,12 @@ public class ModuleDoorBlock extends ModuleBlock {
 
     public ModuleDoorBlock(Properties properties) {
         super(Kind.DOOR, properties);
-        registerDefaultState(stateDefinition.any().setValue(HALF, DoubleBlockHalf.LOWER));
+        registerDefaultState(defaultBlockState().setValue(HALF, DoubleBlockHalf.LOWER));
     }
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+        super.createBlockStateDefinition(builder);
         builder.add(HALF);
     }
 

@@ -1,6 +1,12 @@
 {
-  "parent": "minecraft:block/cube_all",
+  "parent": "minecraft:block/cube",
   "textures": {
-    "all": "drillships:block/door_top"
+    "particle": "drillships:block/door_top",
+    "north": "drillships:block/door_top",
+    "south": "drillships:block/door_top",
+    "east": "drillships:block/hull_00",
+    "west": "drillships:block/hull_00",
+    "up": "drillships:block/hull_00",
+    "down": "drillships:block/hull_00"
   }
 }

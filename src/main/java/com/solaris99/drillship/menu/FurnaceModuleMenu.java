@@ -24,10 +24,11 @@ import net.neoforged.neoforge.items.IItemHandlerModifiable;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import net.neoforged.neoforge.items.SlotItemHandler;
 
-/** The furnace module: its input and output, the push and pull toggles, and the whitelist of what it pulls. */
+/** A furnace module (the furnace or the alloy furnace): its inputs and output, the push and pull toggles, and the whitelist of what it pulls. */
 public class FurnaceModuleMenu extends AbstractContainerMenu {
     public static final int BUTTON_PUSH = 0;
     public static final int BUTTON_PULL = 1;
+    // The last input sits here; an alloy furnace's first is one slot to its left.
     public static final int INPUT_X = 44;
     public static final int OUTPUT_X = 98;
     public static final int SLOTS_Y = 22;
@@ -41,31 +42,43 @@ public class FurnaceModuleMenu extends AbstractContainerMenu {
     public static final int PULL = 3;
     public static final int STARVED = 4;
     private static final int DATA_COUNT = 5;
-    // Menu slots: input, output, the whitelist, then the player's inventory.
-    private static final int FIRST_FILTER_SLOT = 2;
-    private static final int FIRST_PLAYER_SLOT = FIRST_FILTER_SLOT + ItemFilter.SIZE;
 
     private final BlockPos pos;
     @Nullable
     private final FurnaceModuleBlockEntity furnace;
     private final ItemFilter filter;
     private final ContainerData data;
+    private final int inputs;
+    // Menu slots: the inputs, the output, the whitelist, then the player's inventory.
+    private final int firstFilterSlot;
+    private final int firstPlayerSlot;
 
     public static void open(ServerPlayer player, BlockPos pos) {
         if (player.level().getBlockEntity(pos) instanceof FurnaceModuleBlockEntity furnace) {
-            player.openMenu(new SimpleMenuProvider((id, inventory, p) -> new FurnaceModuleMenu(id, inventory, pos, furnace, furnace.items()),
-                    Component.translatable("block.drillships.furnace_module")), buf -> buf.writeBlockPos(pos));
+            player.openMenu(new SimpleMenuProvider((id, inventory, p) -> new FurnaceModuleMenu(id, inventory, pos, furnace, furnace.items(), furnace.inputs()),
+                    player.level().getBlockState(pos).getBlock().getName()), buf -> {
+                        buf.writeBlockPos(pos);
+                        buf.writeVarInt(furnace.inputs());
+                    });
         }
     }
 
     public FurnaceModuleMenu(int id, Inventory inventory, RegistryFriendlyByteBuf buf) {
-        this(id, inventory, buf.readBlockPos(), null, new ItemStackHandler(2));
+        this(id, inventory, buf.readBlockPos(), null, buf.readVarInt());
     }
 
-    private FurnaceModuleMenu(int id, Inventory inventory, BlockPos pos, @Nullable FurnaceModuleBlockEntity furnace, IItemHandlerModifiable items) {
+    private FurnaceModuleMenu(int id, Inventory inventory, BlockPos pos, @Nullable FurnaceModuleBlockEntity furnace, int inputs) {
+        this(id, inventory, pos, furnace, new ItemStackHandler(inputs + 1), inputs);
+    }
+
+    private FurnaceModuleMenu(int id, Inventory inventory, BlockPos pos, @Nullable FurnaceModuleBlockEntity furnace, IItemHandlerModifiable items,
+            int inputs) {
         super(ModMenus.FURNACE_MODULE.get(), id);
         this.pos = pos;
         this.furnace = furnace;
+        this.inputs = inputs;
+        this.firstFilterSlot = inputs + 1;
+        this.firstPlayerSlot = firstFilterSlot + ItemFilter.SIZE;
         this.filter = furnace != null ? furnace.pullFilter() : new ItemFilter(true, () -> {
         });
         this.data = furnace == null ? new SimpleContainerData(DATA_COUNT) : new ContainerData() {
@@ -90,8 +103,10 @@ public class FurnaceModuleMenu extends AbstractContainerMenu {
                 return DATA_COUNT;
             }
         };
-        addSlot(new SlotItemHandler(items, FurnaceModuleBlockEntity.INPUT, INPUT_X, SLOTS_Y));
-        addSlot(new SlotItemHandler(items, FurnaceModuleBlockEntity.OUTPUT, OUTPUT_X, SLOTS_Y) {
+        for (int input = 0; input < inputs; input++) {
+            addSlot(new SlotItemHandler(items, input, INPUT_X - (inputs - 1 - input) * ShipMenus.SLOT_SIZE, SLOTS_Y));
+        }
+        addSlot(new SlotItemHandler(items, inputs, OUTPUT_X, SLOTS_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return false;
@@ -133,13 +148,13 @@ public class FurnaceModuleMenu extends AbstractContainerMenu {
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
         Slot slot = slots.get(index);
-        if (!slot.hasItem() || index >= FIRST_FILTER_SLOT && index < FIRST_PLAYER_SLOT) {
+        if (!slot.hasItem() || index >= firstFilterSlot && index < firstPlayerSlot) {
             return ItemStack.EMPTY;
         }
         ItemStack stack = slot.getItem();
         ItemStack original = stack.copy();
-        boolean moved = index < FIRST_FILTER_SLOT ? moveItemStackTo(stack, FIRST_PLAYER_SLOT, slots.size(), true)
-                : moveItemStackTo(stack, FurnaceModuleBlockEntity.INPUT, FurnaceModuleBlockEntity.INPUT + 1, false);
+        boolean moved = index < firstFilterSlot ? moveItemStackTo(stack, firstPlayerSlot, slots.size(), true)
+                : moveItemStackTo(stack, 0, inputs, false);
         if (!moved) {
             return ItemStack.EMPTY;
         }

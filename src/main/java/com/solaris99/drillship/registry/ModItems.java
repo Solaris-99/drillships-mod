@@ -13,6 +13,7 @@ import com.solaris99.drillship.item.WagonItem;
 import com.solaris99.drillship.ship.ShipTier;
 import com.solaris99.drillship.ship.ShipUpgrade;
 
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.registries.DeferredItem;
@@ -90,6 +91,9 @@ public final class ModItems {
     public static final DeferredItem<ModuleItem> INVENTORY_IO_MODULE = module("inventory_io_module", ModBlocks.INVENTORY_IO_MODULE,
             ModuleItem.Placement.WALL);
     public static final DeferredItem<ModuleItem> FURNACE_MODULE = module("furnace_module", ModBlocks.FURNACE_MODULE, ModuleItem.Placement.WALL);
+    public static final DeferredItem<ModuleItem> ALLOY_FURNACE_MODULE = module("alloy_furnace_module", ModBlocks.ALLOY_FURNACE_MODULE,
+            ModuleItem.Placement.WALL);
+    public static final DeferredItem<BlockItem> ALLOY_FURNACE = ITEMS.registerSimpleBlockItem(ModBlocks.ALLOY_FURNACE);
     public static final DeferredItem<ModuleItem> ENERGY_IO_MODULE = module("energy_io_module", ModBlocks.ENERGY_IO_MODULE, ModuleItem.Placement.WALL);
     public static final DeferredItem<ModuleItem> DOOR_MODULE = module("door_module", ModBlocks.DOOR_MODULE, ModuleItem.Placement.DOOR);
     public static final DeferredItem<ModuleItem> HATCH_MODULE = module("hatch_module", ModBlocks.HATCH_MODULE, ModuleItem.Placement.HATCH);

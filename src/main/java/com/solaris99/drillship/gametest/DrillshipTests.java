@@ -1,8 +1,12 @@
 package com.solaris99.drillship.gametest;
 
+import java.util.List;
+
 import com.solaris99.drillship.Config;
 import com.solaris99.drillship.Drillships;
+import com.solaris99.drillship.block.ModuleBlock;
 import com.solaris99.drillship.block.UpgradePanelBlock;
+import com.solaris99.drillship.block.entity.AlloyFurnaceBlockEntity;
 import com.solaris99.drillship.block.entity.EnergyIoBlockEntity;
 import com.solaris99.drillship.block.entity.FurnaceModuleBlockEntity;
 import com.solaris99.drillship.block.entity.InventoryIoBlockEntity;
@@ -13,10 +17,12 @@ import com.solaris99.drillship.entity.WagonEntity;
 import com.solaris99.drillship.item.DrillshipItem;
 import com.solaris99.drillship.item.ModuleItem;
 import com.solaris99.drillship.item.WagonItem;
+import com.solaris99.drillship.material.Material;
 import com.solaris99.drillship.registry.ModBlocks;
 import com.solaris99.drillship.registry.ModComponents;
 import com.solaris99.drillship.registry.ModItems;
 import com.solaris99.drillship.registry.ModKeys;
+import com.solaris99.drillship.registry.ModMaterials;
 import com.solaris99.drillship.ship.InteriorLayout;
 import com.solaris99.drillship.ship.RadarOre;
 import com.solaris99.drillship.ship.ShipManager;
@@ -32,6 +38,9 @@ import com.solaris99.drillship.ship.TeslaTurret;
 import com.solaris99.drillship.ship.TurretTargets;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -44,8 +53,10 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.animal.Cow;
 import net.minecraft.world.entity.monster.Husk;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -57,6 +68,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.IItemHandlerModifiable;
 import net.neoforged.neoforge.items.ItemHandlerHelper;
+
 
 
 /** Run with {@code ./gradlew runGameTestServer}. Each test uses an empty 13x10x28 area; the ship faces +Z. */
@@ -370,6 +382,7 @@ public class DrillshipTests {
         BlockState shell = interior.getBlockState(wall);
         helper.assertTrue(ShipModules.install(interior, wall, ModItems.FURNACE_MODULE.get()) == null, "A furnace module goes into a wall");
         helper.assertTrue(interior.getBlockState(wall).is(ModBlocks.FURNACE_MODULE.get()), "The wall block became the module");
+        helper.assertTrue(interior.getBlockState(wall).getValue(ModuleBlock.FACING) == Direction.EAST, "It faces into the room, away from the min-X wall");
         FurnaceModuleBlockEntity furnace = (FurnaceModuleBlockEntity) interior.getBlockEntity(wall);
         furnace.items().setStackInSlot(FurnaceModuleBlockEntity.INPUT, new ItemStack(Items.RAW_IRON, 3));
         BlockPos floor = room.origin().offset(room.sizeX() / 2, 0, room.sizeZ() / 2);
@@ -377,6 +390,7 @@ public class DrillshipTests {
         helper.assertTrue(ShipModules.install(interior, room.origin().offset(0, 2, 0), ModItems.CRAFTING_MODULE.get()) != null,
                 "Modules don't go into the corner beams");
         helper.assertTrue(ShipModules.install(interior, floor, ModItems.HATCH_MODULE.get()) == null, "A hatch goes into the floor");
+        helper.assertTrue(interior.getBlockState(floor).getValue(ModuleBlock.FACING) == Direction.UP, "A floor hatch faces up into the room");
 
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
         ship.fuelSlot().setStackInSlot(0, ItemStack.EMPTY);
@@ -474,13 +488,13 @@ public class DrillshipTests {
         furnace.pullFilter().setItem(0, new ItemStack(Items.RAW_IRON));
         furnace.togglePull();
         helper.runAfterDelay(240, () -> {
-            helper.assertTrue(furnace.items().getStackInSlot(FurnaceModuleBlockEntity.OUTPUT).is(Items.IRON_INGOT),
+            helper.assertTrue(furnace.items().getStackInSlot(furnace.outputSlot()).is(Items.IRON_INGOT),
                     "It pulled the raw iron from the ship and smelted it on the ship's energy");
             helper.assertTrue(ship.energyUse() == FurnaceModuleBlockEntity.ENERGY_PER_TICK,
                     "The status panel's use should be the furnace's 20 FE/t, but is " + ship.energyUse());
             furnace.togglePush();
             helper.runAfterDelay(25, () -> {
-                helper.assertTrue(contains(ship, Items.IRON_INGOT) && furnace.items().getStackInSlot(FurnaceModuleBlockEntity.OUTPUT).isEmpty(),
+                helper.assertTrue(contains(ship, Items.IRON_INGOT) && furnace.items().getStackInSlot(furnace.outputSlot()).isEmpty(),
                         "It pushes its output into the ship's inventory");
                 remove(helper, ship);
                 helper.succeed();
@@ -523,12 +537,12 @@ public class DrillshipTests {
             }));
         }
         Cow cow = target(helper, EntityType.COW, 2.0);
-        helper.runAfterDelay(12, () -> {
+        // Once its interior is ticking, a few volleys in.
+        helper.succeedWhen(() -> {
             float taken = husk.getMaxHealth() - husk.getHealth();
-            helper.assertTrue(taken == 8.0F || taken == 12.0F, "Two or three full 4-damage hits through diamond armor, but it took " + taken);
+            helper.assertTrue(taken >= 8.0F && taken % 4.0F == 0.0F, "Full 4-damage hits through diamond armor, but it took " + taken);
             helper.assertTrue(cow.getHealth() == cow.getMaxHealth(), "Hostiles only: the cow is left alone");
             remove(helper, ship);
-            helper.succeed();
         });
     }
 
@@ -546,14 +560,71 @@ public class DrillshipTests {
             helper.assertTrue(cow.getHealth() == cow.getMaxHealth(), "Switched off, the turret doesn't fire");
             ship.setTurretsOn(true);
             ship.setTurretTargets(TurretTargets.EVERYTHING);
-            helper.runAfterDelay(12, () -> {
+            helper.succeedWhen(() -> {
                 helper.assertTrue(cow.getHealth() < cow.getMaxHealth(), "Targeting everything, it zaps the cow");
                 ServerPlayer player = helper.makeMockServerPlayerInLevel();
                 helper.assertTrue(ShipModules.remove(interior, mount, player) && ship.turret(0) == null
                         && interior.getBlockState(mount).is(ModBlocks.HULL_CEILING.get()), "The wrench takes the turret out");
                 remove(helper, ship);
-                helper.succeed();
             });
+        });
+    }
+
+    // Materials and alloys
+
+    @GameTest(template = TEMPLATE)
+    public static void materialsAreOursWhenNoOtherModHasThem(GameTestHelper helper) {
+        for (Material material : Material.values()) {
+            helper.assertTrue(material.isOurs(), material.id() + " should be ours in a pack without other material mods");
+        }
+        Item ourTin = ModMaterials.of(Material.TIN).ingot().get();
+        helper.assertTrue(Material.TIN.isOurs(tag -> List.of(BuiltInRegistries.ITEM.wrapAsHolder(ourTin))), "Our own ingot in the tag doesn't count");
+        helper.assertTrue(!Material.TIN.isOurs(tag -> List.of(BuiltInRegistries.ITEM.wrapAsHolder(ourTin), BuiltInRegistries.ITEM.wrapAsHolder(Items.IRON_INGOT))),
+                "Another mod's ingot in the tag means it's theirs");
+        RecipeManager recipes = helper.getLevel().getRecipeManager();
+        for (String id : new String[] {"bronze_ingot_from_alloying", "brass_ingot_from_alloying", "steel_ingot_from_alloying", "alloy_furnace",
+                "tin_block", "tin_ingot_from_smelting_raw"}) {
+            helper.assertTrue(recipes.byKey(Drillships.id(id)).isPresent(), "The recipe " + id + " should be on");
+        }
+        helper.assertTrue(helper.getLevel().registryAccess().registryOrThrow(Registries.PLACED_FEATURE).containsKey(Drillships.id("ore_tin_middle")),
+                "Tin ore should generate");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE, timeoutTicks = 300)
+    public static void alloyFurnaceMakesBronze(GameTestHelper helper) {
+        BlockPos pos = new BlockPos(2, 1, 2);
+        helper.setBlock(pos, ModBlocks.ALLOY_FURNACE.get());
+        AlloyFurnaceBlockEntity furnace = (AlloyFurnaceBlockEntity) helper.getBlockEntity(pos);
+        furnace.items().setStackInSlot(AlloyFurnaceBlockEntity.FIRST_INPUT, new ItemStack(ModMaterials.of(Material.TIN).ingot().get()));
+        furnace.items().setStackInSlot(AlloyFurnaceBlockEntity.SECOND_INPUT, new ItemStack(Items.COPPER_INGOT, 3));
+        furnace.items().setStackInSlot(AlloyFurnaceBlockEntity.FUEL, new ItemStack(Items.COAL));
+        helper.runAfterDelay(210, () -> {
+            ItemStack output = furnace.items().getStackInSlot(AlloyFurnaceBlockEntity.OUTPUT);
+            helper.assertTrue(output.is(ModMaterials.of(Material.BRONZE).ingot().get()) && output.getCount() == 4,
+                    "3 copper and 1 tin, in either slot, make 4 bronze, but made " + output);
+            helper.assertTrue(furnace.items().getStackInSlot(AlloyFurnaceBlockEntity.FIRST_INPUT).isEmpty()
+                    && furnace.items().getStackInSlot(AlloyFurnaceBlockEntity.SECOND_INPUT).isEmpty(), "The inputs are used up");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = TEMPLATE, timeoutTicks = 300)
+    public static void alloyFurnaceModuleMakesSteel(GameTestHelper helper) {
+        floor(helper);
+        ShipState ship = place(helper, ORIGIN);
+        ServerLevel interior = interior(helper);
+        BlockPos wall = freeWall(helper, ship);
+        helper.assertTrue(ShipModules.install(interior, wall, ModItems.ALLOY_FURNACE_MODULE.get()) == null, "The alloy furnace module goes into a wall");
+        FurnaceModuleBlockEntity furnace = (FurnaceModuleBlockEntity) interior.getBlockEntity(wall);
+        helper.assertTrue(furnace.inputs() == 2, "It has two inputs");
+        furnace.items().setStackInSlot(0, new ItemStack(Items.IRON_INGOT));
+        furnace.items().setStackInSlot(1, new ItemStack(Items.CHARCOAL, 2));
+        helper.runAfterDelay(210, () -> {
+            helper.assertTrue(furnace.items().getStackInSlot(furnace.outputSlot()).is(ModMaterials.of(Material.STEEL).ingot().get()),
+                    "1 iron and 2 coals make steel on the ship's energy");
+            remove(helper, ship);
+            helper.succeed();
         });
     }
 

@@ -1,0 +1,15 @@
+{
+  "values": [
+    "drillships:tin_block",
+    "drillships:raw_tin_block",
+    "drillships:tin_ore",
+    "drillships:deepslate_tin_ore",
+    "drillships:zinc_block",
+    "drillships:raw_zinc_block",
+    "drillships:zinc_ore",
+    "drillships:deepslate_zinc_ore",
+    "drillships:bronze_block",
+    "drillships:brass_block",
+    "drillships:steel_block"
+  ]
+}

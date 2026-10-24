@@ -14,6 +14,7 @@ import com.solaris99.drillship.registry.ModBlocks;
 import com.solaris99.drillship.registry.ModKeys;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -43,7 +44,7 @@ public final class ShipModules {
             return cantGoHere;
         }
         InteriorLayout.Room room = place.room();
-        BlockState module = item.block().defaultBlockState();
+        BlockState module = item.block().defaultBlockState().setValue(ModuleBlock.FACING, intoRoom(room, pos));
         switch (item.placement()) {
             case WALL -> {
                 if (!isFreeWall(level, room, pos)) {
@@ -113,6 +114,24 @@ public final class ShipModules {
             }
         }
         return false;
+    }
+
+    // From a shell block towards the inside of its room.
+    private static Direction intoRoom(InteriorLayout.Room room, BlockPos pos) {
+        int x = pos.getX() - room.origin().getX(), y = pos.getY() - room.origin().getY(), z = pos.getZ() - room.origin().getZ();
+        if (y == 0) {
+            return Direction.UP;
+        }
+        if (y == room.sizeY() - 1) {
+            return Direction.DOWN;
+        }
+        if (x == 0) {
+            return Direction.EAST;
+        }
+        if (x == room.sizeX() - 1) {
+            return Direction.WEST;
+        }
+        return z == 0 ? Direction.SOUTH : Direction.NORTH;
     }
 
     private record Place(ShipState ship, int section, InteriorLayout.Room room) {

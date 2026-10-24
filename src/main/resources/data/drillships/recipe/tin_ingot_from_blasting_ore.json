@@ -1,0 +1,25 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "drillships:material",
+      "materials": [
+        "tin"
+      ]
+    }
+  ],
+  "type": "minecraft:blasting",
+  "category": "misc",
+  "ingredient": [
+    {
+      "item": "drillships:tin_ore"
+    },
+    {
+      "item": "drillships:deepslate_tin_ore"
+    }
+  ],
+  "result": {
+    "id": "drillships:tin_ingot"
+  },
+  "experience": 0.7,
+  "cookingtime": 100
+}

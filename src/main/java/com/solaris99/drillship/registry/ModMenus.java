@@ -1,6 +1,7 @@
 package com.solaris99.drillship.registry;
 
 import com.solaris99.drillship.Drillships;
+import com.solaris99.drillship.menu.AlloyFurnaceMenu;
 import com.solaris99.drillship.menu.CraftingStorageMenu;
 import com.solaris99.drillship.menu.EnergyIoMenu;
 import com.solaris99.drillship.menu.FurnaceModuleMenu;
@@ -33,6 +34,9 @@ public final class ModMenus {
             () -> IMenuTypeExtension.create(FurnaceModuleMenu::new));
     public static final DeferredHolder<MenuType<?>, MenuType<EnergyIoMenu>> ENERGY_IO = MENUS.register("energy_io",
             () -> IMenuTypeExtension.create(EnergyIoMenu::new));
+
+    public static final DeferredHolder<MenuType<?>, MenuType<AlloyFurnaceMenu>> ALLOY_FURNACE = MENUS.register("alloy_furnace",
+            () -> IMenuTypeExtension.create(AlloyFurnaceMenu::new));
 
     private ModMenus() {
     }

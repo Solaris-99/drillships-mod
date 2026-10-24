@@ -23,6 +23,7 @@ import com.solaris99.drillship.ship.ShipState;
 import com.solaris99.drillship.ship.ShipTravel;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -39,6 +40,9 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
 
 /**
@@ -48,14 +52,23 @@ import net.minecraft.world.phys.BlockHitResult;
  */
 public class ModuleBlock extends Block implements EntityBlock {
     public enum Kind {
-        CRAFTING, CRAFTING_INVENTORY_ACCESS, INVENTORY_ACCESS, INVENTORY_IO, FURNACE, ENERGY_IO, DOOR, HATCH, TESLA_TURRET
+        CRAFTING, CRAFTING_INVENTORY_ACCESS, INVENTORY_ACCESS, INVENTORY_IO, FURNACE, ALLOY_FURNACE, ENERGY_IO, DOOR, HATCH, TESLA_TURRET
     }
+
+    /** The face into the room, which shows the module; the others show the hull. */
+    public static final DirectionProperty FACING = BlockStateProperties.FACING;
 
     private final Kind kind;
 
     public ModuleBlock(Kind kind, Properties properties) {
         super(properties);
         this.kind = kind;
+        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH));
+    }
+
+    @Override
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(FACING);
     }
 
     public Kind kind() {
@@ -72,7 +85,8 @@ public class ModuleBlock extends Block implements EntityBlock {
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return switch (kind) {
             case INVENTORY_IO -> new InventoryIoBlockEntity(pos, state);
-            case FURNACE -> new FurnaceModuleBlockEntity(pos, state);
+            case FURNACE -> FurnaceModuleBlockEntity.smelting(pos, state);
+            case ALLOY_FURNACE -> FurnaceModuleBlockEntity.alloying(pos, state);
             case ENERGY_IO -> new EnergyIoBlockEntity(pos, state);
             case TESLA_TURRET -> new TeslaTurretBlockEntity(pos, state);
             default -> null;
@@ -86,7 +100,7 @@ public class ModuleBlock extends Block implements EntityBlock {
         if (level.isClientSide()) {
             return null;
         }
-        if (type == ModBlockEntities.FURNACE_MODULE.get()) {
+        if (type == ModBlockEntities.FURNACE_MODULE.get() || type == ModBlockEntities.ALLOY_FURNACE_MODULE.get()) {
             return (BlockEntityTicker<T>) (BlockEntityTicker<FurnaceModuleBlockEntity>) FurnaceModuleBlockEntity::serverTick;
         }
         if (type == ModBlockEntities.TESLA_TURRET.get()) {
@@ -111,7 +125,7 @@ public class ModuleBlock extends Block implements EntityBlock {
             case CRAFTING_INVENTORY_ACCESS -> CraftingStorageMenu.open(serverPlayer, ship, pos);
             case INVENTORY_ACCESS -> ShipStorageMenu.open(serverPlayer, ship, pos);
             case INVENTORY_IO -> InventoryIoMenu.open(serverPlayer, pos);
-            case FURNACE -> FurnaceModuleMenu.open(serverPlayer, pos);
+            case FURNACE, ALLOY_FURNACE -> FurnaceModuleMenu.open(serverPlayer, pos);
             case ENERGY_IO -> EnergyIoMenu.open(serverPlayer, pos);
             case DOOR, HATCH -> ShipTravel.exitThroughModule(serverPlayer, ship, base(state, pos));
             // The turrets' settings are on the status panel.

@@ -1,6 +1,8 @@
 {
-  "parent": "minecraft:block/cube_all",
+  "parent": "minecraft:block/orientable",
   "textures": {
-    "all": "drillships:block/inventory_access"
+    "front": "drillships:block/inventory_access",
+    "side": "drillships:block/hull_00",
+    "top": "drillships:block/hull_00"
   }
 }

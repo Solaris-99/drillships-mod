@@ -1,3 +1,6 @@
 {
-  "parent": "drillships:block/energy_io_module"
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "drillships:item/energy_io_module"
+  }
 }

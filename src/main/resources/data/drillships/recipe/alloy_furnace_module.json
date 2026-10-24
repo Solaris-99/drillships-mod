@@ -1,0 +1,26 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "drillships:material",
+      "materials": [
+        "bronze",
+        "brass",
+        "steel"
+      ]
+    }
+  ],
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "drillships:alloy_furnace"
+    },
+    {
+      "item": "drillships:module_base"
+    }
+  ],
+  "result": {
+    "id": "drillships:alloy_furnace_module",
+    "count": 1
+  }
+}

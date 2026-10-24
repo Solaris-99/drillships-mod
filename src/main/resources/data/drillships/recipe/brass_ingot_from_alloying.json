@@ -1,0 +1,26 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "drillships:material",
+      "materials": [
+        "brass"
+      ]
+    }
+  ],
+  "type": "drillships:alloying",
+  "ingredients": [
+    {
+      "tag": "c:ingots/copper",
+      "count": 3
+    },
+    {
+      "tag": "c:ingots/zinc",
+      "count": 1
+    }
+  ],
+  "result": {
+    "id": "drillships:brass_ingot",
+    "count": 4
+  },
+  "time": 200
+}

@@ -1,0 +1,11 @@
+{
+  "type": "neoforge:add_features",
+  "biomes": "#minecraft:is_overworld",
+  "features": [
+    "drillships:ore_tin_middle",
+    "drillships:ore_tin_small",
+    "drillships:ore_zinc_middle",
+    "drillships:ore_zinc_small"
+  ],
+  "step": "underground_ores"
+}

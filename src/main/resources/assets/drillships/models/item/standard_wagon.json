@@ -1,4 +1,6 @@
 {
   "parent": "minecraft:item/generated",
-  "textures": { "layer0": "minecraft:item/hopper_minecart" }
+  "textures": {
+    "layer0": "drillships:item/standard_wagon"
+  }
 }

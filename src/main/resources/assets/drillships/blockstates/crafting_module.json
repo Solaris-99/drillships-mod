@@ -1,6 +1,24 @@
 {
   "variants": {
-    "": {
+    "facing=north": {
+      "model": "drillships:block/crafting_module"
+    },
+    "facing=east": {
+      "model": "drillships:block/crafting_module",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "drillships:block/crafting_module",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "drillships:block/crafting_module",
+      "y": 270
+    },
+    "facing=up": {
+      "model": "drillships:block/crafting_module"
+    },
+    "facing=down": {
       "model": "drillships:block/crafting_module"
     }
   }

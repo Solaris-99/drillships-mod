@@ -1,3 +1,6 @@
 {
-  "parent": "drillships:block/medium_tesla_turret"
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "drillships:item/medium_tesla_turret"
+  }
 }

@@ -1,0 +1,21 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "drillships:material",
+      "materials": [
+        "brass"
+      ]
+    }
+  ],
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "drillships:brass_block"
+    }
+  ],
+  "result": {
+    "id": "drillships:brass_ingot",
+    "count": 9
+  }
+}

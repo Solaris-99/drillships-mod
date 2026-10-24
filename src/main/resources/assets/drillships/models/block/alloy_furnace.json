@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "front": "drillships:block/alloy_furnace_off",
+    "side": "minecraft:block/bricks",
+    "top": "minecraft:block/furnace_top"
+  }
+}

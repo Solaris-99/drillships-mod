@@ -1,0 +1,21 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "drillships:material",
+      "materials": [
+        "tin"
+      ]
+    }
+  ],
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "drillships:raw_tin_block"
+    }
+  ],
+  "result": {
+    "id": "drillships:raw_tin",
+    "count": 9
+  }
+}

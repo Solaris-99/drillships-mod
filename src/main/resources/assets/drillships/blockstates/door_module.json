@@ -1,9 +1,45 @@
 {
   "variants": {
-    "half=lower": {
+    "facing=north,half=lower": {
       "model": "drillships:block/door_module_bottom"
     },
-    "half=upper": {
+    "facing=north,half=upper": {
+      "model": "drillships:block/door_module_top"
+    },
+    "facing=east,half=lower": {
+      "model": "drillships:block/door_module_bottom",
+      "y": 90
+    },
+    "facing=east,half=upper": {
+      "model": "drillships:block/door_module_top",
+      "y": 90
+    },
+    "facing=south,half=lower": {
+      "model": "drillships:block/door_module_bottom",
+      "y": 180
+    },
+    "facing=south,half=upper": {
+      "model": "drillships:block/door_module_top",
+      "y": 180
+    },
+    "facing=west,half=lower": {
+      "model": "drillships:block/door_module_bottom",
+      "y": 270
+    },
+    "facing=west,half=upper": {
+      "model": "drillships:block/door_module_top",
+      "y": 270
+    },
+    "facing=up,half=lower": {
+      "model": "drillships:block/door_module_bottom"
+    },
+    "facing=up,half=upper": {
+      "model": "drillships:block/door_module_top"
+    },
+    "facing=down,half=lower": {
+      "model": "drillships:block/door_module_bottom"
+    },
+    "facing=down,half=upper": {
       "model": "drillships:block/door_module_top"
     }
   }

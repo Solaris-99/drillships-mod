@@ -1,0 +1,26 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "drillships:material",
+      "materials": [
+        "steel"
+      ]
+    }
+  ],
+  "type": "drillships:alloying",
+  "ingredients": [
+    {
+      "tag": "c:ingots/iron",
+      "count": 1
+    },
+    {
+      "tag": "minecraft:coals",
+      "count": 2
+    }
+  ],
+  "result": {
+    "id": "drillships:steel_ingot",
+    "count": 1
+  },
+  "time": 200
+}

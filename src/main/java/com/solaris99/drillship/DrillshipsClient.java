@@ -1,5 +1,6 @@
 package com.solaris99.drillship;
 
+import com.solaris99.drillship.client.AlloyFurnaceScreen;
 import com.solaris99.drillship.client.ClientConfig;
 import com.solaris99.drillship.client.ClientEvents;
 import com.solaris99.drillship.client.CraftingStorageScreen;
@@ -70,5 +71,6 @@ public class DrillshipsClient {
         event.register(ModMenus.INVENTORY_IO.get(), InventoryIoScreen::new);
         event.register(ModMenus.FURNACE_MODULE.get(), FurnaceModuleScreen::new);
         event.register(ModMenus.ENERGY_IO.get(), EnergyIoScreen::new);
+        event.register(ModMenus.ALLOY_FURNACE.get(), AlloyFurnaceScreen::new);
     }
 }

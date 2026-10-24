@@ -1,4 +1,6 @@
 {
   "parent": "minecraft:item/generated",
-  "textures": { "layer0": "minecraft:block/smoker_front_on" }
+  "textures": {
+    "layer0": "drillships:item/standard_engine"
+  }
 }
